@@ -1,17 +1,16 @@
 import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { getDailyNoteSettings } from "obsidian-daily-notes-interface"
 
-// Remember to rename these classes and interfaces!
-
-interface MyPluginSettings {
-	mySetting: string;
+interface ObligatorSettings {
+	heading: string;
 }
 
-const DEFAULT_SETTINGS: MyPluginSettings = {
-	mySetting: 'default'
+const DEFAULT_SETTINGS: ObligatorSettings = {
+	mySetting: null
 }
 
-export default class MyPlugin extends Plugin {
-	settings: MyPluginSettings;
+export default class Obligator extends Plugin {
+	settings: ObligatorSettings;
 
 	async onload() {
 		await this.loadSettings();
@@ -66,7 +65,7 @@ export default class MyPlugin extends Plugin {
 		});
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
+		this.addSettingTab(new ObligatorSettingTab(this.app, this));
 
 		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
 		// Using this function will automatically remove the event listener when this plugin is disabled.
@@ -107,31 +106,46 @@ class SampleModal extends Modal {
 	}
 }
 
-class SampleSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
+class ObligatorSettingTab extends PluginSettingTab {
+	plugin: Obligator;
 
-	constructor(app: App, plugin: MyPlugin) {
+	constructor(app: App, plugin: Obligator) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
 
-	display(): void {
+	async getHeadings() {
+		const { template } = getDailyNoteSettings();
+		let file = this.app.vault.getAbstractFileByPath(template);
+		if (file === null) {
+			file = this.app.vault.getAbstractFileByPath(`${template}.md`);
+		}
+		if (file === null) {
+			return []
+		}
+		const content = await this.app.vault.read(file);
+		const headings = Array.from(content.matchAll(/#{1,} .*/g)).map(
+			([heading]) => heading
+		);
+		return headings;
+	}
+
+	async display(): void {
+		const headings = await this.getHeadings();
 		const {containerEl} = this;
 
 		containerEl.empty();
 
-		containerEl.createEl('h2', {text: 'Settings for my awesome plugin.'});
+		containerEl.createEl('h2', {text: 'Obligator Settings'});
 
 		new Setting(containerEl)
-			.setName('Setting #1')
-			.setDesc('It\'s a secret')
-			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue(this.plugin.settings.mySetting)
-				.onChange(async (value) => {
-					console.log('Secret: ' + value);
-					this.plugin.settings.mySetting = value;
-					await this.plugin.saveSettings();
-				}));
+			.setName('Heading')
+			.setDesc("The heading from the template under which todo list items belong.")
+			.addDropdown(dropdown => dropdown
+				.addOptions({
+					...headings,
+					none: "None"
+				})
+			);
 	}
 }
