@@ -6,7 +6,7 @@ interface ObligatorSettings {
 }
 
 const DEFAULT_SETTINGS: ObligatorSettings = {
-	mySetting: null
+	heading: null
 }
 
 export default class Obligator extends Plugin {
@@ -145,6 +145,10 @@ class ObligatorSettingTab extends PluginSettingTab {
 				.addOptions({
 					...headings,
 					none: "None"
+				})
+				.onChange(value => {
+					this.plugin.settings.heading = value;
+					this.plugin.saveSettings();
 				})
 			);
 	}
