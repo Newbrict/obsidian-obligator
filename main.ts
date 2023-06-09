@@ -1,4 +1,4 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, TFolder, TFile } from 'obsidian';
 import { getDailyNoteSettings } from "obsidian-daily-notes-interface"
 
 interface ObligatorSettings {
@@ -16,65 +16,91 @@ export default class Obligator extends Plugin {
 		await this.loadSettings();
 
 		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('dice', 'Sample Plugin', (evt: MouseEvent) => {
+		const ribbonIconEl = this.addRibbonIcon('carrot', 'Obligator', async (evt: MouseEvent) => {
 			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
-		});
-		// Perform additional things with the ribbon
-		ribbonIconEl.addClass('my-plugin-ribbon-class');
+			// Get a list of all the files in the daily notes directory
+			const { folder: notes_path, format } = getDailyNoteSettings();
+			const notes: TFolder[] = [];
+			const notes_folder = this.app.vault.getAbstractFileByPath(notes_path);
+			if (notes_folder instanceof TFolder) {
+			  for (let child of notes_folder.children) {
+					if(child instanceof TFile) {
+						notes.push(child);
+					}
+				}
+			}
+			notes.sort(
+				(a, b) =>
+					window.moment(b.basename, format).valueOf()
+				- window.moment(a.basename, format).valueOf()
+			);
 
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status Bar Text');
+			// Get the last note that's not today's.
+			let src_note = null;
+			let today = moment();
+			for (let i=0; i < notes.length; i++) {
+				if (moment(notes[i].basename, format).isBefore(today, 'day')) {
+					src_note = notes[i];
+					break;
+				}
+			}
+
+			if (src_note === null) {
+				return;
+			}
+	
+			const dst_note = this.app.workspace.getActiveFile()
+			if (dst_note === null
+			|| !moment(dst_note.basename, format).isSame(today, 'day')) {
+				new Notice("You need to be viewing today's daily-note in order to use this");
+				return;
+			}
+
+			let src_content = await this.app.vault.read(src_note);
+			let src_lines = src_content.split('\n')
+			const src_header_index = src_lines.indexOf(this.settings.heading);
+			if (src_header_index === -1) {
+				new Notice("Couldn't find the todo header in the last note");
+				return;
+			}
+			let copy_lines = []
+			for (let i = src_header_index+1; i < src_lines.length; i++) {
+				const line = src_lines[i];
+				//TODO make this more robust later, it shouldn't just terminate with --
+				const terminal = /^----/;
+				if (terminal.test(line)) {
+					break;
+				}
+				const checked = /^\s*- \[x\]/;
+				// only copy over unchecked items
+				if (!checked.test(line)) {
+	 				copy_lines.push(line);
+				}
+			}
+			let dst_content = await this.app.vault.read(dst_note);
+			let dst_lines = dst_content.split('\n')
+			const dst_header_index = dst_lines.indexOf(this.settings.heading);
+			if (dst_header_index === -1) {
+				new Notice("Couldn't find the todo header in today's note");
+				return;
+			}
+
+			Array.prototype.splice.apply(dst_lines, [dst_header_index+1, 0, ...copy_lines]);
+			this.app.vault.modify(dst_note, dst_lines.join('\n'));
+		});
 
 		// This adds a simple command that can be triggered anywhere
 		this.addCommand({
-			id: 'open-sample-modal-simple',
-			name: 'Open sample modal (simple)',
+			id: 'obligator-command',
+			name: 'obligator-command',
 			callback: () => {
-				new SampleModal(this.app).open();
-			}
-		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'sample-editor-command',
-			name: 'Sample editor command',
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				console.log(editor.getSelection());
-				editor.replaceSelection('Sample Editor Command');
-			}
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-sample-modal-complex',
-			name: 'Open sample modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
-
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
-				}
+				console.log("Ran obligator-command command");
 			}
 		});
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new ObligatorSettingTab(this.app, this));
 
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			console.log('click', evt);
-		});
-
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
 	}
 
 	onunload() {
@@ -87,22 +113,6 @@ export default class Obligator extends Plugin {
 
 	async saveSettings() {
 		await this.saveData(this.settings);
-	}
-}
-
-class SampleModal extends Modal {
-	constructor(app: App) {
-		super(app);
-	}
-
-	onOpen() {
-		const {contentEl} = this;
-		contentEl.setText('Woah!');
-	}
-
-	onClose() {
-		const {contentEl} = this;
-		contentEl.empty();
 	}
 }
 
@@ -146,9 +156,13 @@ class ObligatorSettingTab extends PluginSettingTab {
 					...headings,
 					none: "None"
 				})
-				.onChange(value => {
-					this.plugin.settings.heading = value;
-					this.plugin.saveSettings();
+				.onChange(async value => {
+					if (value < headings.length) {
+						this.plugin.settings.heading = headings[value];
+					} else {
+						this.plugin.settings.heading = null;
+					}
+					await this.plugin.saveSettings();
 				})
 			);
 	}

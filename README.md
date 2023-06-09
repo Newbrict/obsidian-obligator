@@ -2,6 +2,9 @@
 
 Obligator copies over the unfinished todo list items in your daily notes while leaving formatting untouched.
 
+
+Currently, it will copy over everything (except for checked todo-list items) between the specified header, and the terminal sequence: `----`.
+
 --
 
 ## Building
