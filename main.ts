@@ -3,10 +3,12 @@ import { getDailyNoteSettings } from "obsidian-daily-notes-interface"
 
 interface ObligatorSettings {
 	heading: string;
+	date_format: string;
 }
 
 const DEFAULT_SETTINGS: ObligatorSettings = {
-	heading: null
+	heading: null,
+	date_format: null
 }
 
 export default class Obligator extends Plugin {
@@ -48,7 +50,7 @@ export default class Obligator extends Plugin {
 			if (src_note === null) {
 				return;
 			}
-	
+
 			const dst_note = this.app.workspace.getActiveFile()
 			if (dst_note === null
 			|| !moment(dst_note.basename, format).isSame(today, 'day')) {
@@ -161,6 +163,34 @@ class ObligatorSettingTab extends PluginSettingTab {
 						this.plugin.settings.heading = headings[value];
 					} else {
 						this.plugin.settings.heading = null;
+					}
+					await this.plugin.saveSettings();
+				})
+			);
+
+		const make_preview_div = (format) => {
+			return `Today's note would look like this: <b class="u-pop">${moment().format(format)}</b>`
+		}
+		const default_date_format = "YYYY-MM-DD";
+		const date_format_frag = document.createDocumentFragment(), date_format_div = document.createElement("div");
+		let date_preview_div = document.createElement("div");
+		date_format_div.innerHTML = `For syntax information, refer to the <a href="https://momentjs.com/docs/#/displaying/format/">moment documentation</a>.`
+		date_preview_div.innerHTML = make_preview_div(default_date_format);
+		date_format_frag.append(date_format_div)
+		date_format_frag.append(date_preview_div)
+		new Setting(containerEl)
+			.setName("Date format")
+			.setDesc(date_format_frag)
+			.addText(text => text
+				.setPlaceholder(default_date_format)
+				.setValue(this.plugin.settings.date_format)
+				.onChange(async (value) => {
+					if (value == "") {
+						this.plugin.settings.date_format = default_date_format;
+						date_preview_div.innerHTML = make_preview_div(default_date_format);
+					} else {
+						this.plugin.settings.date_format = value;
+						date_preview_div.innerHTML = make_preview_div(value);
 					}
 					await this.plugin.saveSettings();
 				})
