@@ -133,6 +133,11 @@
     "@nodelib/fs.scandir" "2.1.5"
     fastq "^1.6.0"
 
+"@popperjs/core@^2.11.8":
+  version "2.11.8"
+  resolved "https://registry.yarnpkg.com/@popperjs/core/-/core-2.11.8.tgz#6b79032e760a0899cd4204710beede972a3a185f"
+  integrity sha512-P1st0aksCrn9sGZhp8GMYwBnQsbvAWsZAX44oXNNvLHGqAOcoVxmjZiohstwQ7SqKnbR47akdNi+uleWD8+g6A==
+
 "@types/codemirror@0.0.108":
   version "0.0.108"
   resolved "https://registry.yarnpkg.com/@types/codemirror/-/codemirror-0.0.108.tgz#e640422b666bf49251b384c390cdeb2362585bde"
@@ -452,17 +457,17 @@ obsidian-daily-notes-interface@^0.9.4:
     obsidian obsidianmd/obsidian-api#master
     tslib "2.1.0"
 
-"obsidian@github:obsidianmd/obsidian-api#master":
-  version "1.2.8"
-  resolved "https://codeload.github.com/obsidianmd/obsidian-api/tar.gz/583ba39e3f6c0546de5e5e8742256a60e2d78ebc"
-  dependencies:
-    "@types/codemirror" "0.0.108"
-    moment "2.29.4"
-
 obsidian@latest:
   version "1.2.8"
   resolved "https://registry.yarnpkg.com/obsidian/-/obsidian-1.2.8.tgz#294e76d9021cbf341ffd5d49e2bcfa15432da7d7"
   integrity sha512-HrC+feA8o0tXspj4lEAqxb1btwLwHD2oHXSwbbN+CdRHURqbCkuIDLld+nkuyJ1w1c9uvVDRVk8BoeOnWheOrQ==
+  dependencies:
+    "@types/codemirror" "0.0.108"
+    moment "2.29.4"
+
+obsidian@obsidianmd/obsidian-api#master:
+  version "1.2.8"
+  resolved "https://codeload.github.com/obsidianmd/obsidian-api/tar.gz/583ba39e3f6c0546de5e5e8742256a60e2d78ebc"
   dependencies:
     "@types/codemirror" "0.0.108"
     moment "2.29.4"

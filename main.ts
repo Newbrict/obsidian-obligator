@@ -1,14 +1,18 @@
 import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, TFolder, TFile } from 'obsidian';
-import { getDailyNoteSettings } from "obsidian-daily-notes-interface"
+import { FileSuggest, FolderSuggest } from "./ui";
 
 interface ObligatorSettings {
 	heading: string;
 	date_format: string;
+	template_file: string;
+	note_path: string;
 }
 
 const DEFAULT_SETTINGS: ObligatorSettings = {
 	heading: null,
-	date_format: null
+	date_format: "YYYY-MM-DD",
+	template_file: null,
+	note_path: null
 }
 
 export default class Obligator extends Plugin {
@@ -21,9 +25,8 @@ export default class Obligator extends Plugin {
 		const ribbonIconEl = this.addRibbonIcon('carrot', 'Obligator', async (evt: MouseEvent) => {
 			// Called when the user clicks the icon.
 			// Get a list of all the files in the daily notes directory
-			const { folder: notes_path, format } = getDailyNoteSettings();
 			const notes: TFolder[] = [];
-			const notes_folder = this.app.vault.getAbstractFileByPath(notes_path);
+			const notes_folder = this.app.vault.getAbstractFileByPath(this.settings.note_path);
 			if (notes_folder instanceof TFolder) {
 			  for (let child of notes_folder.children) {
 					if(child instanceof TFile) {
@@ -33,15 +36,15 @@ export default class Obligator extends Plugin {
 			}
 			notes.sort(
 				(a, b) =>
-					window.moment(b.basename, format).valueOf()
-				- window.moment(a.basename, format).valueOf()
+					window.moment(b.basename, this.settings.date_format).valueOf()
+				- window.moment(a.basename, this.settings.date_format).valueOf()
 			);
 
 			// Get the last note that's not today's.
 			let src_note = null;
 			let today = moment();
 			for (let i=0; i < notes.length; i++) {
-				if (moment(notes[i].basename, format).isBefore(today, 'day')) {
+				if (moment(notes[i].basename, this.settings.date_format).isBefore(today, 'day')) {
 					src_note = notes[i];
 					break;
 				}
@@ -53,7 +56,7 @@ export default class Obligator extends Plugin {
 
 			const dst_note = this.app.workspace.getActiveFile()
 			if (dst_note === null
-			|| !moment(dst_note.basename, format).isSame(today, 'day')) {
+			|| !moment(dst_note.basename, this.settings.date_format).isSame(today, 'day')) {
 				new Notice("You need to be viewing today's daily-note in order to use this");
 				return;
 			}
@@ -127,10 +130,9 @@ class ObligatorSettingTab extends PluginSettingTab {
 	}
 
 	async getHeadings() {
-		const { template } = getDailyNoteSettings();
-		let file = this.app.vault.getAbstractFileByPath(template);
+		let file = this.app.vault.getAbstractFileByPath(this.plugin.settings.template_file);
 		if (file === null) {
-			file = this.app.vault.getAbstractFileByPath(`${template}.md`);
+			file = this.app.vault.getAbstractFileByPath(`${this.plugin.settings.template_file}.md`);
 		}
 		if (file === null) {
 			return []
@@ -148,26 +150,37 @@ class ObligatorSettingTab extends PluginSettingTab {
 
 		containerEl.empty();
 
-		containerEl.createEl('h2', {text: 'Obligator Settings'});
+		containerEl.createEl('h2', {text: 'Daily Note Settings'});
 
+		// New File Location
 		new Setting(containerEl)
-			.setName('Heading')
-			.setDesc("The heading from the template under which todo list items belong.")
-			.addDropdown(dropdown => dropdown
-				.addOptions({
-					...headings,
-					none: "None"
-				})
-				.onChange(async value => {
-					if (value < headings.length) {
-						this.plugin.settings.heading = headings[value];
-					} else {
-						this.plugin.settings.heading = null;
-					}
+			.setName("New file location")
+			.setDesc("New daily notes will be placed here.")
+			.addText(text => {
+				new FolderSuggest(this.app, text.inputEl);
+				text.setValue(this.plugin.settings.note_path)
+				    .onChange(async value => {
+					this.plugin.settings.note_path = value;
 					await this.plugin.saveSettings();
 				})
-			);
+			});
 
+		// Template File
+		new Setting(containerEl)
+			.setName("Template file")
+			.setDesc("New daily notes will utilize the template file specified.")
+			.addText(text => {
+				new FileSuggest(this.app, text.inputEl);
+				text.setValue(this.plugin.settings.template_file)
+				    .onChange(async value => {
+					this.plugin.settings.template_file = value;
+					await this.plugin.saveSettings();
+				})
+			});
+
+
+		//TODO don't use innerHTML:
+		// https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines#Avoid+%60innerHTML%60%2C+%60outerHTML%60+and+%60insertAdjacentHTML%60
 		const make_preview_div = (format) => {
 			return `Today's note would look like this: <b class="u-pop">${moment().format(format)}</b>`
 		}
@@ -186,14 +199,34 @@ class ObligatorSettingTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.date_format)
 				.onChange(async (value) => {
 					if (value == "") {
-						this.plugin.settings.date_format = default_date_format;
 						date_preview_div.innerHTML = make_preview_div(default_date_format);
 					} else {
-						this.plugin.settings.date_format = value;
 						date_preview_div.innerHTML = make_preview_div(value);
+					}
+					this.plugin.settings.date_format = value;
+					await this.plugin.saveSettings();
+				})
+			);
+
+		containerEl.createEl('h2', {text: 'Obligator Settings'});
+		// Which heading contains obligations?
+		new Setting(containerEl)
+			.setName('Heading')
+			.setDesc("The heading from the template under which todo list items belong.")
+			.addDropdown(dropdown => dropdown
+				.addOptions({
+					none: "None",
+					...headings
+				})
+				.onChange(async value => {
+					if (value < headings.length) {
+						this.plugin.settings.heading = headings[value];
+					} else {
+						this.plugin.settings.heading = null;
 					}
 					await this.plugin.saveSettings();
 				})
 			);
+
 	}
 }
