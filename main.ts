@@ -4,14 +4,14 @@ import { FileSuggest, FolderSuggest } from "./ui";
 interface ObligatorSettings {
 	heading: string;
 	date_format: string;
-	template_file: string;
+	template_path: string;
 	note_path: string;
 }
 
 const DEFAULT_SETTINGS: ObligatorSettings = {
 	heading: null,
 	date_format: "YYYY-MM-DD",
-	template_file: null,
+	template_path: null,
 	note_path: null
 }
 
@@ -34,9 +34,8 @@ export default class Obligator extends Plugin {
 					}
 				}
 			}
-			notes.sort(
-				(a, b) =>
-					window.moment(b.basename, this.settings.date_format).valueOf()
+			notes.sort((a, b) =>
+				window.moment(b.basename, this.settings.date_format).valueOf()
 				- window.moment(a.basename, this.settings.date_format).valueOf()
 			);
 
@@ -54,44 +53,66 @@ export default class Obligator extends Plugin {
 				return;
 			}
 
-			const dst_note = this.app.workspace.getActiveFile()
-			if (dst_note === null
-			|| !moment(dst_note.basename, this.settings.date_format).isSame(today, 'day')) {
-				new Notice("You need to be viewing today's daily-note in order to use this");
-				return;
+			// Make sure the default value is applied if it's left blank
+			let date_format = this.settings.date_format;
+			if (date_format == "") {
+				date_format = DEFAULT_SETTINGS.date_format;
 			}
+			const note_name = moment().format(date_format);
 
-			let src_content = await this.app.vault.read(src_note);
-			let src_lines = src_content.split('\n')
-			const src_header_index = src_lines.indexOf(this.settings.heading);
-			if (src_header_index === -1) {
-				new Notice("Couldn't find the todo header in the last note");
+			const template_file = this.app.vault.getAbstractFileByPath(`${this.settings.template_path}.md`);
+			if (template_file == undefined) {
+				if (template_path == "") {
+					new Notice(`You must specify a template file in the settings.`);
+				} else {
+					new Notice(`Your template file "${this.settings.template_path}" does not exist.`);
+				}
 				return;
 			}
-			let copy_lines = []
-			for (let i = src_header_index+1; i < src_lines.length; i++) {
-				const line = src_lines[i];
-				//TODO make this more robust later, it shouldn't just terminate with --
-				const terminal = /^----/;
-				if (terminal.test(line)) {
-					break;
+			const template_contents = await this.app.vault.read(template_file);
+			//TODO replace the template variables in the file
+			const new_note_path = `${this.settings.note_path}/${note_name}.md`
+			let output_file = this.app.vault.getAbstractFileByPath(new_note_path);
+			// This runs when we're creating the file for the first time.
+			// This is the only time that we should be moving items over from
+			// the todo list, otherwise we'll keep duplicating content
+			if (output_file == undefined) {
+				// TODO more parts of this can be moved in this if statement.
+				let src_content = await this.app.vault.read(src_note);
+				let src_lines = src_content.split('\n')
+				const src_header_index = src_lines.indexOf(this.settings.heading);
+				if (src_header_index === -1) {
+					//TODO what about a fresh install with no previous note?
+					new Notice("Couldn't find the todo header in the last note");
+					return;
 				}
-				const checked = /^\s*- \[x\]/;
-				// only copy over unchecked items
-				if (!checked.test(line)) {
-	 				copy_lines.push(line);
+				let copy_lines = []
+				for (let i = src_header_index+1; i < src_lines.length; i++) {
+					const line = src_lines[i];
+					//TODO make this more robust later, it shouldn't just terminate with --
+					const terminal = /^----/;
+					if (terminal.test(line)) {
+						break;
+					}
+					const checked = /^\s*- \[x\]/;
+					// only copy over unchecked items
+					if (!checked.test(line)) {
+		 				copy_lines.push(line);
+					}
 				}
-			}
-			let dst_content = await this.app.vault.read(dst_note);
-			let dst_lines = dst_content.split('\n')
-			const dst_header_index = dst_lines.indexOf(this.settings.heading);
-			if (dst_header_index === -1) {
-				new Notice("Couldn't find the todo header in today's note");
-				return;
-			}
+				let output_lines = template_contents.split('\n')
+				const output_header_index = output_lines.indexOf(this.settings.heading);
+				if (output_header_index === -1) {
+					new Notice("Couldn't find the todo header in today's note");
+					return;
+				}
 
-			Array.prototype.splice.apply(dst_lines, [dst_header_index+1, 0, ...copy_lines]);
-			this.app.vault.modify(dst_note, dst_lines.join('\n'));
+				Array.prototype.splice.apply(output_lines, [output_header_index+1, 0, ...copy_lines]);
+				output_file = await this.app.vault.create(new_note_path, output_lines.join('\n'));
+			}
+			const active_leaf = this.app.workspace.getLeaf();
+			await active_leaf.openFile(output_file);
+
 		});
 
 		// This adds a simple command that can be triggered anywhere
@@ -130,9 +151,9 @@ class ObligatorSettingTab extends PluginSettingTab {
 	}
 
 	async getHeadings() {
-		let file = this.app.vault.getAbstractFileByPath(this.plugin.settings.template_file);
+		let file = this.app.vault.getAbstractFileByPath(this.plugin.settings.template_path);
 		if (file === null) {
-			file = this.app.vault.getAbstractFileByPath(`${this.plugin.settings.template_file}.md`);
+			file = this.app.vault.getAbstractFileByPath(`${this.plugin.settings.template_path}.md`);
 		}
 		if (file === null) {
 			return []
@@ -171,9 +192,9 @@ class ObligatorSettingTab extends PluginSettingTab {
 			.setDesc("New daily notes will utilize the template file specified.")
 			.addText(text => {
 				new FileSuggest(this.app, text.inputEl);
-				text.setValue(this.plugin.settings.template_file)
+				text.setValue(this.plugin.settings.template_path)
 				    .onChange(async value => {
-					this.plugin.settings.template_file = value;
+					this.plugin.settings.template_path = value;
 					await this.plugin.saveSettings();
 				})
 			});
