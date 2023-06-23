@@ -5,6 +5,7 @@ With this plugin, you can specify a header containing your todo items. Unchecked
 todo items will be copied over to the new daily note. This leaves you with a
 running history of your todo-list.
 
+![](preview.gif)
 
 Currently, it will copy over everything (except for checked todo-list items)
 between the specified header, and the terminal sequence: `----`. This will
