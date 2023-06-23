@@ -1,5 +1,21 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, TFolder, TFile } from 'obsidian';
-import { FileSuggest, FolderSuggest } from "./ui";
+import {
+	App,
+	Editor,
+	MarkdownView,
+	Modal,
+	Notice,
+	Plugin,
+	PluginSettingTab,
+	Setting,
+	TFolder,
+	TFile,
+	MomentFormatComponent
+} from 'obsidian';
+
+import {
+	FileSuggest,
+	FolderSuggest
+} from "./ui";
 
 interface ObligatorSettings {
 	heading: string;
@@ -22,7 +38,7 @@ export default class Obligator extends Plugin {
 		await this.loadSettings();
 
 		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('carrot', 'Obligator', async (evt: MouseEvent) => {
+		const ribbonIconEl = this.addRibbonIcon('carrot', `Open today's obligator note`, async (evt: MouseEvent) => {
 			// Called when the user clicks the icon.
 			// Get a list of all the files in the daily notes directory
 			const notes: TFolder[] = [];
@@ -115,15 +131,6 @@ export default class Obligator extends Plugin {
 
 		});
 
-		// This adds a simple command that can be triggered anywhere
-		this.addCommand({
-			id: 'obligator-command',
-			name: 'obligator-command',
-			callback: () => {
-				console.log("Ran obligator-command command");
-			}
-		});
-
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new ObligatorSettingTab(this.app, this));
 
@@ -199,35 +206,36 @@ class ObligatorSettingTab extends PluginSettingTab {
 				})
 			});
 
-
-		//TODO don't use innerHTML:
-		// https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines#Avoid+%60innerHTML%60%2C+%60outerHTML%60+and+%60insertAdjacentHTML%60
-		const make_preview_div = (format) => {
-			return `Today's note would look like this: <b class="u-pop">${moment().format(format)}</b>`
-		}
-		const default_date_format = "YYYY-MM-DD";
-		const date_format_frag = document.createDocumentFragment(), date_format_div = document.createElement("div");
-		let date_preview_div = document.createElement("div");
-		date_format_div.innerHTML = `For syntax information, refer to the <a href="https://momentjs.com/docs/#/displaying/format/">moment documentation</a>.`
-		date_preview_div.innerHTML = make_preview_div(default_date_format);
-		date_format_frag.append(date_format_div)
-		date_format_frag.append(date_preview_div)
-		new Setting(containerEl)
+		let date_formatter: MomentFormatComponent;
+		const setting_date_format = new Setting(containerEl)
 			.setName("Date format")
-			.setDesc(date_format_frag)
-			.addText(text => text
-				.setPlaceholder(default_date_format)
-				.setValue(this.plugin.settings.date_format)
-				.onChange(async (value) => {
-					if (value == "") {
-						date_preview_div.innerHTML = make_preview_div(default_date_format);
-					} else {
-						date_preview_div.innerHTML = make_preview_div(value);
-					}
-					this.plugin.settings.date_format = value;
-					await this.plugin.saveSettings();
-				})
-			);
+			.addMomentFormat((format: MomentFormatComponent) => {
+				date_formatter = format
+					.setDefaultFormat(DEFAULT_SETTINGS.date_format)
+					.setPlaceholder(DEFAULT_SETTINGS.date_format)
+					.setValue(this.plugin.settings.date_format)
+					.onChange(async (value) => {
+						this.plugin.settings.date_format = value;
+						await this.plugin.saveSettings();
+					});
+			});
+
+
+		const date_format_el = setting_date_format.descEl.createEl("b", {
+			cls: "u-pop",
+			text: "test"
+		});
+		date_formatter.setSampleEl(date_format_el);
+		setting_date_format.descEl.append(
+			"For syntax information, refer to the ",
+			setting_date_format.descEl.createEl("a", {
+				href: "https://momentjs.com/docs/#/displaying/format/",
+				text: "moment documentation"
+			}),
+			setting_date_format.descEl.createEl("br"),
+			"Today's note would look like this: ",
+			date_format_el
+		);
 
 		containerEl.createEl('h2', {text: 'Obligator Settings'});
 		// Which heading contains obligations?

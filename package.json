@@ -1,7 +1,7 @@
 {
-	"name": "obsidian-sample-plugin",
+	"name": "obsidian-obligator",
 	"version": "1.0.0",
-	"description": "This is a sample plugin for Obsidian (https://obsidian.md)",
+	"description": "Obligator is a replacement for daily-todos which copies over unchecked todo items under a specified header",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",

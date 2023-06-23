@@ -1,11 +1,28 @@
-# Obsidian Obligator
+# Obligator
 
-Obligator copies over the unfinished todo list items in your daily notes while leaving formatting untouched.
+Obligator replaces and extends the function of the built in daily-notes plugin.
+With this plugin, you can specify a header containing your todo items. Unchecked
+todo items will be copied over to the new daily note. This leaves you with a
+running history of your todo-list.
 
 
-Currently, it will copy over everything (except for checked todo-list items) between the specified header, and the terminal sequence: `----`.
+Currently, it will copy over everything (except for checked todo-list items)
+between the specified header, and the terminal sequence: `----`. This will
+be improved soon.
 
---
+
+## How to use Obligator
+
+When you click the carrot icon, if today's note doesn't already exist, a new
+note file will be made reflecting today's date. All items between the specified
+header and the terminal sequence will be copied over, except for finished todos.
+
+---
+
+## TODO
+
+* Add better terminal sequence support
+* https://marcus.se.net/obsidian-plugin-docs/publishing/release-your-plugin-with-github-actions
 
 ## Building
 * `yarn install` (install dependencies)

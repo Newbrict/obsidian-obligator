@@ -3,7 +3,7 @@
 	"name": "Obligator",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "Obligator copies over the unfinished todo list items in your daily notes while leaving formatting untouched.",
+	"description": "Obligator is a replacement for daily-todos which copies over unchecked todo items under a specified header",
 	"author": "Dimitar Dimitrov",
 	"authorUrl": "https://github.com/Newbrict/obsidian-obligator",
 	"isDesktopOnly": false
