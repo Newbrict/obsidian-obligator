@@ -23,6 +23,7 @@ header and the terminal sequence will be copied over, except for finished todos.
 
 * Add better terminal sequence support
 * https://marcus.se.net/obsidian-plugin-docs/publishing/release-your-plugin-with-github-actions
+* Right now template variables do not work
 
 
 ## Building
@@ -31,4 +32,4 @@ header and the terminal sequence will be copied over, except for finished todos.
 * restart Obsidian
 
 ### Attributions
-* Date suggestions code taken from [mirnovov](https://github.com/mirnovov/obsidian-homepage/blob/main/src/suggest.ts)
+* File suggestions code taken from [mirnovov](https://github.com/mirnovov/obsidian-homepage/blob/main/src/suggest.ts)
