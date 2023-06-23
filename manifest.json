@@ -1,10 +1,9 @@
 {
-	"id": "obsidian-obligator",
+	"id": "obligator",
 	"name": "Obligator",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"minAppVersion": "0.15.0",
 	"description": "Obligator is a replacement for daily-todos which copies over unchecked todo items under a specified header",
 	"author": "Dimitar Dimitrov",
-	"authorUrl": "https://github.com/Newbrict/obsidian-obligator",
 	"isDesktopOnly": false
 }
