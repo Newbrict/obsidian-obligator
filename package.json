@@ -1,6 +1,6 @@
 {
-	"name": "obsidian-obligator",
-	"version": "1.0.0",
+	"name": "obligator",
+	"version": "1.0.1",
 	"description": "Obligator is a replacement for daily-todos which copies over unchecked todo items under a specified header",
 	"main": "main.js",
 	"scripts": {
