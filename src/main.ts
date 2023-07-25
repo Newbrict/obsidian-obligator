@@ -9,7 +9,8 @@ import {
 	Setting,
 	TFolder,
 	TFile,
-	MomentFormatComponent
+	MomentFormatComponent,
+	normalizePath
 } from 'obsidian';
 
 import {
@@ -42,7 +43,7 @@ export default class Obligator extends Plugin {
 			// Called when the user clicks the icon.
 			// Get a list of all the files in the daily notes directory
 			const notes: TFolder[] = [];
-			const notes_folder = this.app.vault.getAbstractFileByPath(this.settings.note_path);
+			const notes_folder = this.app.vault.getAbstractFileByPath(normalizePath(this.settings.note_path));
 			if (notes_folder instanceof TFolder) {
 			  for (let child of notes_folder.children) {
 					if(child instanceof TFile) {
@@ -122,7 +123,6 @@ export default class Obligator extends Plugin {
 					new Notice("Couldn't find the todo header in today's note");
 					return;
 				}
-
 				Array.prototype.splice.apply(output_lines, [output_header_index+1, 0, ...copy_lines]);
 				output_file = await this.app.vault.create(new_note_path, output_lines.join('\n'));
 			}
@@ -178,7 +178,7 @@ class ObligatorSettingTab extends PluginSettingTab {
 
 		containerEl.empty();
 
-		containerEl.createEl('h2', {text: 'Daily Note Settings'});
+		//containerEl.createEl('h2', {text: 'Daily Note Settings'});
 
 		// New File Location
 		new Setting(containerEl)
@@ -237,7 +237,7 @@ class ObligatorSettingTab extends PluginSettingTab {
 			date_format_el
 		);
 
-		containerEl.createEl('h2', {text: 'Obligator Settings'});
+		//containerEl.createEl('h2', {text: 'Obligator Settings'});
 		// Which heading contains obligations?
 		new Setting(containerEl)
 			.setName('Heading')
