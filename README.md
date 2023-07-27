@@ -18,13 +18,18 @@ When you click the carrot icon, if today's note doesn't already exist, a new
 note file will be made reflecting today's date. All items between the specified
 header and the terminal sequence will be copied over, except for finished todos.
 
+### Template variables
+{{date}}, {{time}}, and {{title}} work as they normally would.
+in addition, you may use {{previous_note}} and {{previous_note_path}} to create
+back-links to the previous note from the current note. If there is no previous
+note, then these variables will be blank
+
 ---
 
 ## TODO
 
 * Add better terminal sequence support
 * https://marcus.se.net/obsidian-plugin-docs/publishing/release-your-plugin-with-github-actions
-* Right now template variables do not work
 
 
 ## Building

@@ -38,9 +38,51 @@ export default class Obligator extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
-		// This creates an icon in the left ribbon.
+		// This creates an icon in the left ribbon. This function is called
+		// when the user clicks the icon.
 		const ribbonIconEl = this.addRibbonIcon('carrot', `Open today's obligator note`, async (evt: MouseEvent) => {
-			// Called when the user clicks the icon.
+
+			const template_file = this.app.vault.getAbstractFileByPath(`${this.settings.template_path}.md`);
+			if (template_file == undefined) {
+				if (this.settings.template_path == "") {
+					new Notice(`You must specify a template file in the settings.`);
+				} else {
+					new Notice(`Your template file "${this.settings.template_path}" does not exist.`);
+				}
+				return;
+			}
+			let template_contents = await this.app.vault.read(template_file);
+			// -----------------------------------------------------------------
+			// Fill the template. This isn't done in a separate function because
+			// I use a bunch of variables from this function to fill it.
+			// Other template variables will be filled in later
+			// -----------------------------------------------------------------
+			const now = window.moment();
+			template_contents = template_contents.replace(/{{date:?(.*?)}}/g, (_, format) => {
+				if (format) {
+					return now.format(format)
+				} else {
+					// default format
+					return now.format("YYYY-MM-DD")
+				}
+			});
+			template_contents = template_contents.replace(/{{time:?(.*?)}}/g, (_, format) => {
+				if (format) {
+					return now.format(format)
+				} else {
+					// default format
+					return now.format("HH:mm")
+				}
+			});
+
+			// Make sure the default value is applied if it's left blank
+			let date_format = this.settings.date_format;
+			if (date_format == "") {
+				date_format = DEFAULT_SETTINGS.date_format;
+			}
+			const note_name = now.format(date_format);
+			template_contents = template_contents.replace(/{{title}}/g, note_name);
+
 			// Get a list of all the files in the daily notes directory
 			const notes: TFolder[] = [];
 			const notes_folder = this.app.vault.getAbstractFileByPath(normalizePath(this.settings.note_path));
@@ -67,60 +109,47 @@ export default class Obligator extends Plugin {
 			}
 
 			if (src_note === null) {
-				return;
+				template_contents = template_contents.replace(/{{previous_note}}/g, "");
+				template_contents = template_contents.replace(/{{previous_note_path}}/g, "");
+			} else {
+				template_contents = template_contents.replace(/{{previous_note}}/g, src_note.basename);
+				template_contents = template_contents.replace(/{{previous_note_path}}/g, src_note.path);
 			}
 
-			// Make sure the default value is applied if it's left blank
-			let date_format = this.settings.date_format;
-			if (date_format == "") {
-				date_format = DEFAULT_SETTINGS.date_format;
-			}
-			const note_name = moment().format(date_format);
 
-			const template_file = this.app.vault.getAbstractFileByPath(`${this.settings.template_path}.md`);
-			if (template_file == undefined) {
-				if (template_path == "") {
-					new Notice(`You must specify a template file in the settings.`);
-				} else {
-					new Notice(`Your template file "${this.settings.template_path}" does not exist.`);
-				}
-				return;
-			}
-			const template_contents = await this.app.vault.read(template_file);
-			//TODO replace the template variables in the file
 			const new_note_path = `${this.settings.note_path}/${note_name}.md`
 			let output_file = this.app.vault.getAbstractFileByPath(new_note_path);
 			// This runs when we're creating the file for the first time.
 			// This is the only time that we should be moving items over from
-			// the todo list, otherwise we'll keep duplicating content
+			// the obligation list, otherwise we'll keep duplicating content
 			if (output_file == undefined) {
-				// TODO more parts of this can be moved in this if statement.
-				let src_content = await this.app.vault.read(src_note);
-				let src_lines = src_content.split('\n')
-				const src_header_index = src_lines.indexOf(this.settings.heading);
-				if (src_header_index === -1) {
-					//TODO what about a fresh install with no previous note?
-					new Notice("Couldn't find the todo header in the last note");
-					return;
-				}
 				let copy_lines = []
-				for (let i = src_header_index+1; i < src_lines.length; i++) {
-					const line = src_lines[i];
-					//TODO make this more robust later, it shouldn't just terminate with --
-					const terminal = /^----/;
-					if (terminal.test(line)) {
-						break;
+				if (src_note != null) {
+					let src_content = await this.app.vault.read(src_note);
+					let src_lines = src_content.split('\n')
+					const src_header_index = src_lines.indexOf(this.settings.heading);
+					if (src_header_index === -1) {
+						new Notice("Couldn't find the obligation header in the last note");
+						return;
 					}
-					const checked = /^\s*- \[x\]/;
-					// only copy over unchecked items
-					if (!checked.test(line)) {
-		 				copy_lines.push(line);
+					for (let i = src_header_index+1; i < src_lines.length; i++) {
+						const line = src_lines[i];
+						//TODO make this more robust later, it shouldn't just terminate with --
+						const terminal = /^----/;
+						if (terminal.test(line)) {
+							break;
+						}
+						const checked = /^\s*- \[x\]/;
+						// only copy over unchecked items
+						if (!checked.test(line)) {
+							copy_lines.push(line);
+						}
 					}
 				}
 				let output_lines = template_contents.split('\n')
 				const output_header_index = output_lines.indexOf(this.settings.heading);
 				if (output_header_index === -1) {
-					new Notice("Couldn't find the todo header in today's note");
+					new Notice("Couldn't find the obligation header in today's note, check your template");
 					return;
 				}
 				Array.prototype.splice.apply(output_lines, [output_header_index+1, 0, ...copy_lines]);
@@ -240,8 +269,8 @@ class ObligatorSettingTab extends PluginSettingTab {
 		//containerEl.createEl('h2', {text: 'Obligator Settings'});
 		// Which heading contains obligations?
 		new Setting(containerEl)
-			.setName('Heading')
-			.setDesc("The heading from the template under which todo list items belong.")
+			.setName('Obligation Heading')
+			.setDesc("The heading from the template under which obligator list items belong.")
 			.addDropdown(dropdown => dropdown
 				.addOptions({
 					none: "None",
