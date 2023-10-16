@@ -59,10 +59,12 @@ export class FolderSuggest extends TextInputSuggest<TFolder> {
 	}
 
 	renderSuggestion(folder: TFolder, el: HTMLElement) {
+		// @ts-ignore
 		el.setText(trimFile(folder));
 	}
 
 	selectSuggestion(folder: TFolder) {
+		// @ts-ignore
 		this.inputEl.value = trimFile(folder);
 		this.inputEl.trigger("input");
 		this.close();

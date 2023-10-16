@@ -1,10 +1,8 @@
 // Originally from https://github.com/mirnovov/obsidian-homepage/blob/main/src/utils.ts
-import { App, TFile, TAbstractFile, View as OView } from "obsidian";
+import { App, TFile, View as OView } from "obsidian";
 
-export function trimFile(file: TAbstractFile): string {
-	if (!file || !(file instanceof TFile)) {
-		return "";
-	}
+export function trimFile(file: TFile): string {
+	if (!file) return "";
 	return file.extension == "md" ? file.path.slice(0, -3): file.path;
 }
 
