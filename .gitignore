@@ -22,3 +22,6 @@ data.json
 .DS_Store
 
 *error.log
+
+# Exclude direnv directory for nix development
+.direnv
