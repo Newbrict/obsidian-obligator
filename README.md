@@ -29,7 +29,6 @@ note, then these variables will be blank
 ## TODO
 
 * Add better terminal sequence support
-* https://marcus.se.net/obsidian-plugin-docs/publishing/release-your-plugin-with-github-actions
 
 
 ## Building
