@@ -276,7 +276,8 @@ class ObligatorSettingTab extends PluginSettingTab {
 			cls: "u-pop",
 			text: "test"
 		});
-		date_formatter = new MomentFormatComponent(date_format_el);
+		// @ts-ignore
+		date_formatter.setSampleEl(date_format_el);
 		setting_date_format.descEl.append(
 			"For syntax information, refer to the ",
 			setting_date_format.descEl.createEl("a", {
