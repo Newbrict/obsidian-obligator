@@ -449,25 +449,10 @@ ms@2.1.2:
   resolved "https://registry.yarnpkg.com/ms/-/ms-2.1.2.tgz#d09d1f357b443f493382a8eb3ccd183872ae6009"
   integrity sha512-sGkPx+VjMtmA6MX27oA4FBFELFCZZ4S4XqeGOXCv68tT+jb3vk/RyaKWP0PTKyWtmLSM0b+adUTEvbs1PEaH2w==
 
-obsidian-daily-notes-interface@^0.9.4:
-  version "0.9.4"
-  resolved "https://registry.yarnpkg.com/obsidian-daily-notes-interface/-/obsidian-daily-notes-interface-0.9.4.tgz#df085c5aa4c8c2b2b810185d4d9dc24344cb7604"
-  integrity sha512-PILoRtZUB5wEeGnDQAPMlkVlXwDYoxkLR8Wl4STU2zLNwhcq9kKvQexiXi7sfjGlpTnL+LeAOfEVWyeVndneKg==
-  dependencies:
-    obsidian obsidianmd/obsidian-api#master
-    tslib "2.1.0"
-
 obsidian@latest:
   version "1.2.8"
   resolved "https://registry.yarnpkg.com/obsidian/-/obsidian-1.2.8.tgz#294e76d9021cbf341ffd5d49e2bcfa15432da7d7"
   integrity sha512-HrC+feA8o0tXspj4lEAqxb1btwLwHD2oHXSwbbN+CdRHURqbCkuIDLld+nkuyJ1w1c9uvVDRVk8BoeOnWheOrQ==
-  dependencies:
-    "@types/codemirror" "0.0.108"
-    moment "2.29.4"
-
-obsidian@obsidianmd/obsidian-api#master:
-  version "1.2.8"
-  resolved "https://codeload.github.com/obsidianmd/obsidian-api/tar.gz/583ba39e3f6c0546de5e5e8742256a60e2d78ebc"
   dependencies:
     "@types/codemirror" "0.0.108"
     moment "2.29.4"
@@ -522,11 +507,6 @@ to-regex-range@^5.0.1:
   integrity sha512-65P7iz6X5yEr1cwcgvQxbbIw7Uk3gOy5dIdtZ4rDveLqhrdJP+Li/Hx6tyK0NEb+2GCyneCMJiGqrADCSNk8sQ==
   dependencies:
     is-number "^7.0.0"
-
-tslib@2.1.0:
-  version "2.1.0"
-  resolved "https://registry.yarnpkg.com/tslib/-/tslib-2.1.0.tgz#da60860f1c2ecaa5703ab7d39bc05b6bf988b97a"
-  integrity sha512-hcVC3wYEziELGGmEEXue7D75zbwIIVUMWAVbHItGPx0ziyXxrOMQx4rQEVEV45Ut/1IotuEvwqPopzIOkDMf0A==
 
 tslib@2.4.0:
   version "2.4.0"

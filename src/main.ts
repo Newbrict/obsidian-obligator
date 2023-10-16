@@ -44,10 +44,10 @@ export default class Obligator extends Plugin {
 
 			const template_file = this.app.vault.getAbstractFileByPath(`${this.settings.template_path}.md`);
 			if (template_file == undefined) {
-				if (this.settings.template_path == "") {
+				if (["", null].includes(this.settings.template_path)) {
 					new Notice(`You must specify a template file in the settings.`);
 				} else {
-					new Notice(`Your template file "${this.settings.template_path}" does not exist.`);
+					new Notice(`The template file "${this.settings.template_path}" specified in the settings does not exist.`);
 				}
 				return;
 			}
@@ -85,7 +85,15 @@ export default class Obligator extends Plugin {
 
 			// Get a list of all the files in the daily notes directory
 			const notes: TFolder[] = [];
+			if (["", null].includes(this.settings.note_path)) {
+				new Notice(`You must specify a note path in the settings.`);
+				return;
+			}
 			const notes_folder = this.app.vault.getAbstractFileByPath(normalizePath(this.settings.note_path));
+			if (notes_folder == undefined) {
+				new Notice(`The note path "${this.settings.note_path}" specified in the settings does not exist.`);
+				return;
+			}
 			if (notes_folder instanceof TFolder) {
 			  for (let child of notes_folder.children) {
 					if(child instanceof TFile) {
@@ -147,6 +155,10 @@ export default class Obligator extends Plugin {
 					}
 				}
 				let output_lines = template_contents.split('\n')
+				if (this.settings.heading == null) {
+					new Notice("You must specify the obligation header in the settings.");
+					return;
+				}
 				const output_header_index = output_lines.indexOf(this.settings.heading);
 				if (output_header_index === -1) {
 					new Notice("Couldn't find the obligation header in today's note, check your template");
@@ -268,14 +280,17 @@ class ObligatorSettingTab extends PluginSettingTab {
 
 		//containerEl.createEl('h2', {text: 'Obligator Settings'});
 		// Which heading contains obligations?
+
+		const heading_value = headings.indexOf(this.plugin.settings.heading);
+
 		new Setting(containerEl)
 			.setName('Obligation Heading')
 			.setDesc("The heading from the template under which obligator list items belong.")
 			.addDropdown(dropdown => dropdown
 				.addOptions({
-					none: "None",
 					...headings
 				})
+				.setValue(heading_value)
 				.onChange(async value => {
 					if (value < headings.length) {
 						this.plugin.settings.heading = headings[value];
