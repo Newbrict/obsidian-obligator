@@ -26,10 +26,10 @@ interface ObligatorSettings {
 }
 
 const DEFAULT_SETTINGS: ObligatorSettings = {
-	heading: null,
+	heading: "",
 	date_format: "YYYY-MM-DD",
-	template_path: null,
-	note_path: null
+	template_path: "",
+	note_path: ""
 }
 
 export default class Obligator extends Plugin {
@@ -51,7 +51,11 @@ export default class Obligator extends Plugin {
 				}
 				return;
 			}
-			let template_contents = await this.app.vault.read(template_file);
+			if (!(template_file instanceof TFile)) {
+				new Notice(`A file error occurred, please report this to the GitHub.`);
+				return;
+			}
+				let template_contents = await this.app.vault.read(template_file);
 			// -----------------------------------------------------------------
 			// Fill the template. This isn't done in a separate function because
 			// I use a bunch of variables from this function to fill it.
@@ -84,7 +88,7 @@ export default class Obligator extends Plugin {
 			template_contents = template_contents.replace(/{{title}}/g, note_name);
 
 			// Get a list of all the files in the daily notes directory
-			const notes: TFolder[] = [];
+			const notes: TFile[] = [];
 			if (["", null].includes(this.settings.note_path)) {
 				new Notice(`You must specify a note path in the settings.`);
 				return;
@@ -108,9 +112,9 @@ export default class Obligator extends Plugin {
 
 			// Get the last note that's not today's.
 			let src_note = null;
-			let today = moment();
+			let today = window.moment();
 			for (let i=0; i < notes.length; i++) {
-				if (moment(notes[i].basename, this.settings.date_format).isBefore(today, 'day')) {
+				if (window.moment(notes[i].basename, this.settings.date_format).isBefore(today, 'day')) {
 					src_note = notes[i];
 					break;
 				}
@@ -168,7 +172,9 @@ export default class Obligator extends Plugin {
 				output_file = await this.app.vault.create(new_note_path, output_lines.join('\n'));
 			}
 			const active_leaf = this.app.workspace.getLeaf();
-			await active_leaf.openFile(output_file);
+			if (output_file instanceof TFile) {
+				await active_leaf.openFile(output_file);
+			}
 
 		});
 
@@ -203,17 +209,21 @@ class ObligatorSettingTab extends PluginSettingTab {
 		if (file === null) {
 			file = this.app.vault.getAbstractFileByPath(`${this.plugin.settings.template_path}.md`);
 		}
-		if (file === null) {
+		if (file === null || !(file instanceof TFile)) {
 			return []
 		}
 		const content = await this.app.vault.read(file);
-		const headings = Array.from(content.matchAll(/#{1,} .*/g)).map(
-			([heading]) => heading
+		const headings = Array.from(content.matchAll(/#{1,} .*/g)).map(([value], index) => {
+			return {[index.toString()]: value}
+		});
+		let combined: {[index:string]:any} = {};
+		headings.forEach(h =>
+			combined = {...combined, ...h}
 		);
-		return headings;
+		return combined;
 	}
 
-	async display(): void {
+	async display(): Promise<void> {
 		const headings = await this.getHeadings();
 		const {containerEl} = this;
 
@@ -266,7 +276,7 @@ class ObligatorSettingTab extends PluginSettingTab {
 			cls: "u-pop",
 			text: "test"
 		});
-		date_formatter.setSampleEl(date_format_el);
+		date_formatter = new MomentFormatComponent(date_format_el);
 		setting_date_format.descEl.append(
 			"For syntax information, refer to the ",
 			setting_date_format.descEl.createEl("a", {
@@ -281,22 +291,16 @@ class ObligatorSettingTab extends PluginSettingTab {
 		//containerEl.createEl('h2', {text: 'Obligator Settings'});
 		// Which heading contains obligations?
 
-		const heading_value = headings.indexOf(this.plugin.settings.heading);
+		const heading_value = Object.keys(headings).find(key => headings[key] === this.plugin.settings.heading) || "";
 
 		new Setting(containerEl)
 			.setName('Obligation Heading')
 			.setDesc("The heading from the template under which obligator list items belong.")
 			.addDropdown(dropdown => dropdown
-				.addOptions({
-					...headings
-				})
+				.addOptions(headings)
 				.setValue(heading_value)
 				.onChange(async value => {
-					if (value < headings.length) {
-						this.plugin.settings.heading = headings[value];
-					} else {
-						this.plugin.settings.heading = null;
-					}
+					this.plugin.settings.heading = headings[value] || null;
 					await this.plugin.saveSettings();
 				})
 			);

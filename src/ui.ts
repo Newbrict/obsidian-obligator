@@ -1,6 +1,5 @@
 // Originally from https://github.com/mirnovov/obsidian-homepage/blob/main/src/ui.ts
 import { App, FuzzySuggestModal, Notice, TAbstractFile, TFile, TFolder } from "obsidian";
-import { Homepage } from "./homepage";
 import { TextInputSuggest } from "./suggest";
 import { trimFile } from "./utils";
 
