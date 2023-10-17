@@ -29,6 +29,9 @@ note, then these variables will be blank
 ## TODO
 
 * Add better terminal sequence support
+* Make the fold state carry over to the new note
+* Add a recurring note template
+* Figure out how to make this work on the phone
 
 
 ## Building
