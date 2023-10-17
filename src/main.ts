@@ -213,14 +213,11 @@ class ObligatorSettingTab extends PluginSettingTab {
 			return []
 		}
 		const content = await this.app.vault.read(file);
-		const headings = Array.from(content.matchAll(/#{1,} .*/g)).map(([value], index) => {
-			return {[index.toString()]: value}
-		});
-		let combined: {[index:string]:any} = {};
-		headings.forEach(h =>
-			combined = {...combined, ...h}
-		);
-		return combined;
+		const headings: {[index:string]:any} = Array.from(content.matchAll(/#{1,} .*/g))
+			.reduce((accumulator, [heading], index) => {
+				return {...accumulator, [index.toString()]: heading};
+		}, {});
+		return headings;
 	}
 
 	async display(): Promise<void> {
