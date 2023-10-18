@@ -1,5 +1,5 @@
 {
-  description = "Atompalm Web Manager development environment";
+  description = "Obligator development environment";
 
   # Flake inputs
   inputs = {
