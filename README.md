@@ -17,7 +17,7 @@ When you click the carrot icon, if today's note doesn't already exist, a new
 note file will be made reflecting today's date. All items between the specified
 header and the terminal header will be copied over, except for finished to-dos.
 
-See the [example template file](example_template) for some inspiration on how
+See the [example template file](example/daily_note.md) for some inspiration on how
 to set up your daily note. Also see this sample settings page if you're
 confused about how to configure the settings:
 ![](example/settings.png)
