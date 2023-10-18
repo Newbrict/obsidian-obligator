@@ -27,11 +27,14 @@ header and the terminal header will be copied over, except for finished to-dos.
 
 ## TO-DO (In priority order)
 * Make the fold state carry over to the new note.
-* Add a recurring note template.
 * Make it so that checked tasks which have unchecked subtasks will get copied
   over anyway.
+* Add a recurring note template.
 * Add an example template file.
 * Add an example settings page screenshot.
+* Add an option to delete empty headings. (probably defined as a heading which
+  has no children, where a child is any value except for another heading of
+  greater weight)
 
 ## Design Philosophy
 ### Why does the terminal sequence have to be a header?
