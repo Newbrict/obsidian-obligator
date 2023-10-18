@@ -24,6 +24,8 @@ interface ObligatorSettings {
 	date_format: string;
 	template_path: string;
 	note_path: string;
+	archive: boolean;
+	archive_path: string;
 }
 
 const DEFAULT_SETTINGS: ObligatorSettings = {
@@ -31,7 +33,9 @@ const DEFAULT_SETTINGS: ObligatorSettings = {
 	terminal: "",
 	date_format: "YYYY-MM-DD",
 	template_path: "",
-	note_path: ""
+	note_path: "",
+	archive: false,
+	archive_path: ""
 }
 
 export default class Obligator extends Plugin {
@@ -147,20 +151,20 @@ export default class Obligator extends Plugin {
 			// duplicating content.
 			if (output_file == undefined) {
 				let copy_lines = []
-				if (src_note != null) {
+				if (src_note) {
 					let src_content = await this.app.vault.read(src_note);
 					let src_lines = src_content.split('\n')
-					const src_header_index = src_lines.indexOf(this.settings.heading);
+					const src_heading_index = src_lines.indexOf(this.settings.heading);
 					const src_terminal_index = src_lines.indexOf(this.settings.terminal);
-					if (src_header_index === -1) {
-						new Notice("Couldn't find the obligation header in the last note, aborting.");
+					if (src_heading_index === -1) {
+						new Notice("Couldn't find the obligation heading in the last note, aborting.");
 						return;
 					}
 					if (src_terminal_index === -1) {
-						new Notice("Couldn't find the terminal header in the last note, aborting.");
+						new Notice("Couldn't find the terminal heading in the last note, aborting.");
 						return;
 					}
-					for (let i = src_header_index+1; i <= src_terminal_index; i++) {
+					for (let i = src_heading_index+1; i <= src_terminal_index; i++) {
 						const line = src_lines[i];
 						const checked = /^\s*- \[x\]/;
 						// only copy over unchecked items
@@ -170,8 +174,8 @@ export default class Obligator extends Plugin {
 					}
 				}
 				let output_lines = template_contents.split('\n')
-				const output_header_index = output_lines.indexOf(this.settings.heading);
-				if (output_header_index === -1) {
+				const output_heading_index = output_lines.indexOf(this.settings.heading);
+				if (output_heading_index === -1) {
 					new Notice("Couldn't find the obligation heading in today's note, check your template");
 					return;
 				}
@@ -180,17 +184,30 @@ export default class Obligator extends Plugin {
 					new Notice("Couldn't find the terminal heading in today's note, check your template");
 					return;
 				}
-				console.log(output_lines.toString());
 				Array.prototype.splice.apply(
 					output_lines,
 					[
-						output_header_index+1,
-						output_terminal_index - output_header_index,
+						output_heading_index+1,
+						output_terminal_index - output_heading_index,
 						...copy_lines
 					]
 				);
-				console.log(output_lines.toString());
 				output_file = await this.app.vault.create(new_note_path, output_lines.join('\n'));
+				if (this.settings.archive && src_note) {
+					if (this.settings.archive_path === "") {
+						new Notice("The archive path must be specified when the archive option is turned on, aborting.");
+						return;
+					}
+					const archived_note_path = `${this.settings.archive_path}/${src_note.basename}.md`;
+					try {
+						await this.app.vault.copy(src_note, archived_note_path);
+						await this.app.vault.delete(src_note);
+					// TODO when I figure out how to catch EEXISTS
+					// specifically, I'll catch that, for now just catchall.
+					} catch (error) {
+						new Notice(`A file called ${archived_note_path} already exists, archival skipped.`);
+					}
+				}
 			}
 			const active_leaf = this.app.workspace.getLeaf();
 			if (output_file instanceof TFile) {
@@ -242,7 +259,6 @@ class ObligatorSettingTab extends PluginSettingTab {
 	}
 
 	async display(): Promise<void> {
-		const headings = await this.getHeadings();
 		const {containerEl} = this;
 
 		containerEl.empty();
@@ -312,10 +328,28 @@ class ObligatorSettingTab extends PluginSettingTab {
 		);
 
 		// --------------------------------------------------------------------
-		// The header which contains the to-do list items
+		// Create the dropdown options for the two heading selections
 		// --------------------------------------------------------------------
-		const heading_value = Object.keys(headings)
-			.find(key => headings[key] === this.plugin.settings.heading) || "";
+		const level = (str: string) => {
+			return str.split("#").length - 1;
+		};
+		const all_headings = await this.getHeadings();
+		const heading_value = Object.keys(all_headings)
+			.find(key => all_headings[key] === this.plugin.settings.heading) || "";
+		const terminal_value = Object.keys(all_headings)
+			.find(key => all_headings[key] === this.plugin.settings.terminal) || "";
+		const headings = Object.fromEntries(
+			Object.entries(all_headings).filter(([k, v]) =>
+				terminal_value == ""
+				|| (terminal_value > k && level(v) <= level(all_headings[terminal_value]))
+			)
+		);
+		const terminal_headings = Object.fromEntries(
+			Object.entries(all_headings).filter(([k, v]) => k>heading_value)
+		);
+		// --------------------------------------------------------------------
+		// The heading which contains the to-do list items
+		// --------------------------------------------------------------------
 		new Setting(containerEl)
 			.setName('Obligation Heading')
 			.setDesc("The heading from the template which will contain all of your to-do list items")
@@ -325,24 +359,46 @@ class ObligatorSettingTab extends PluginSettingTab {
 				.onChange(async value => {
 					this.plugin.settings.heading = headings[value] || null;
 					await this.plugin.saveSettings();
+					this.display();
 				})
 			);
 		// --------------------------------------------------------------------
-		// The header which terminates the to-do list items
+		// The heading which terminates the to-do list items
 		// --------------------------------------------------------------------
-		const terminal_value = Object.keys(headings)
-			.find(key => headings[key] === this.plugin.settings.terminal) || "";
 		new Setting(containerEl)
 			.setName('Terminal Heading')
-			.setDesc(`The heading from the template which terminates the to-do list items. Everything between the "Obligation Heading" and this heading in your daily note will be copied over.`)
+			.setDesc(`The heading from the template which terminates the to-do list items. Everything between the "Obligation Heading" and this heading in your daily note will be copied over. The terminal heading must be at a level greater or equal to the "Obligation Heading" option, i.e. you can't terminate an H2 (##) with an H3 (###) but you can with another H2 or an H1 (#).`)
 			.addDropdown(dropdown => dropdown
-				.addOptions(headings)
+				.addOptions(terminal_headings)
 				.setValue(terminal_value)
 				.onChange(async value => {
-					this.plugin.settings.terminal = headings[value] || null;
+					this.plugin.settings.terminal = terminal_headings[value] || null;
 					await this.plugin.saveSettings();
+					this.display();
 				})
 			);
+		// --------------------------------------------------------------------
+		// Toggle the archiving function
+		// --------------------------------------------------------------------
+		new Setting(containerEl)
+			.setName("Archive old notes")
+			.setDesc(`Enabling this will move the previous to-do note into the
+					 directory specified when a new note is created.`)
+			.addToggle(toggle => { toggle
+				.setValue(this.plugin.settings.archive)
+			    .onChange(async value => {
+					this.plugin.settings.archive = value;
+					await this.plugin.saveSettings();
+				})
+			})
+			.addText(text => {
+				new FolderSuggest(this.app, text.inputEl);
+				text.setValue(this.plugin.settings.archive_path).onChange(
+				async value => {
+					this.plugin.settings.archive_path = value;
+					await this.plugin.saveSettings();
+				})
+			});
 
 	}
 }

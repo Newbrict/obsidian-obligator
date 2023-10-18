@@ -26,16 +26,12 @@ header and the terminal header will be copied over, except for finished to-dos.
    these variables will be blank.
 
 ## TO-DO (In priority order)
-* Add a check that forces the terminal heading to come after the obligator
-  heading. Also check for the level to be greater or equal.
 * Make the fold state carry over to the new note.
-* Move old notes to an archive folder.
 * Add a recurring note template.
 * Make it so that checked tasks which have unchecked subtasks will get copied
   over anyway.
 * Add an example template file.
 * Add an example settings page screenshot.
-* Figure out how to make this work on the phone.
 
 ## Design Philosophy
 ### Why does the terminal sequence have to be a header?
