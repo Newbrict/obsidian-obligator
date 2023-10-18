@@ -17,6 +17,11 @@ When you click the carrot icon, if today's note doesn't already exist, a new
 note file will be made reflecting today's date. All items between the specified
 header and the terminal header will be copied over, except for finished to-dos.
 
+See the [example template file](example_template) for some inspiration on how
+to set up your daily note. Also see this sample settings page if you're
+confused about how to configure the settings:
+![](example/settings.png)
+
 ### Template variables
  * {{date}}, {{time}}, and {{title}} work as they normally would.
 
@@ -30,8 +35,6 @@ header and the terminal header will be copied over, except for finished to-dos.
 * Make it so that checked tasks which have unchecked subtasks will get copied
   over anyway.
 * Add a recurring note template.
-* Add an example template file.
-* Add an example settings page screenshot.
 * Add an option to delete empty headings. (probably defined as a heading which
   has no children, where a child is any value except for another heading of
   greater weight)
