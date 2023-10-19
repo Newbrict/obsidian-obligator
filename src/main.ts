@@ -145,6 +145,7 @@ export default class Obligator extends Plugin {
 
 			const new_note_path = `${this.settings.note_path}/${note_name}.md`
 			let output_file = this.app.vault.getAbstractFileByPath(new_note_path);
+			let output_lines = template_contents.split('\n')
 			// This runs when we're creating the daily note, it should only run
 			// once per day, and this is the only time that we should be moving
 			// items over from the obligation list, otherwise we'll keep
@@ -172,26 +173,25 @@ export default class Obligator extends Plugin {
 							copy_lines.push(line);
 						}
 					}
+					const output_heading_index = output_lines.indexOf(this.settings.heading);
+					if (output_heading_index === -1) {
+						new Notice("Couldn't find the obligation heading in today's note, check your template");
+						return;
+					}
+					const output_terminal_index = output_lines.indexOf(this.settings.terminal);
+					if (output_terminal_index === -1) {
+						new Notice("Couldn't find the terminal heading in today's note, check your template");
+						return;
+					}
+					Array.prototype.splice.apply(
+						output_lines,
+						[
+							output_heading_index+1,
+							output_terminal_index - output_heading_index,
+							...copy_lines
+						]
+					);
 				}
-				let output_lines = template_contents.split('\n')
-				const output_heading_index = output_lines.indexOf(this.settings.heading);
-				if (output_heading_index === -1) {
-					new Notice("Couldn't find the obligation heading in today's note, check your template");
-					return;
-				}
-				const output_terminal_index = output_lines.indexOf(this.settings.terminal);
-				if (output_terminal_index === -1) {
-					new Notice("Couldn't find the terminal heading in today's note, check your template");
-					return;
-				}
-				Array.prototype.splice.apply(
-					output_lines,
-					[
-						output_heading_index+1,
-						output_terminal_index - output_heading_index,
-						...copy_lines
-					]
-				);
 				output_file = await this.app.vault.create(new_note_path, output_lines.join('\n'));
 				if (this.settings.archive && src_note) {
 					if (this.settings.archive_path === "") {

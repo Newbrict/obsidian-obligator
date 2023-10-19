@@ -31,6 +31,7 @@ confused about how to configure the settings:
    these variables will be blank.
 
 ## TO-DO (In priority order)
+* Fix the back linking with the archive mode on.
 * Make the fold state carry over to the new note.
 * Make it so that checked tasks which have unchecked subtasks will get copied
   over anyway.
