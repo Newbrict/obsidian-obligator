@@ -1,7 +1,7 @@
 {
 	"id": "obligator",
 	"name": "Obligator",
-	"version": "2.1.0",
+	"version": "2.2.0",
 	"minAppVersion": "0.15.0",
 	"description": "A replacement for daily-todos which functions like a virtual bullet journal by copying over unchecked todo items under a specified header.",
 	"author": "Dimitar Dimitrov",
