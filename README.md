@@ -53,9 +53,8 @@ terminal sequence.
 * restart Obsidian, or toggle on and off the plugin
 
 ## Releasing
-Update the version numbers in `manifest.json` and `package.json` to match, then:
-* git tag -a 1.3.1 -m "1.3.1"
-* git push origin 1.3.1
+* `yarn version`
+* `yarn release`
 
 ## Attributions
 * File suggestions code taken from [mirnovov](https://github.com/mirnovov/obsidian-homepage/blob/main/src/suggest.ts)
