@@ -200,10 +200,7 @@ export default class Obligator extends Plugin {
 					}
 					const archived_note_path = `${this.settings.archive_path}/${src_note.basename}.md`;
 					try {
-						await this.app.vault.copy(src_note, archived_note_path);
-						await this.app.vault.delete(src_note);
-					// TODO when I figure out how to catch EEXISTS
-					// specifically, I'll catch that, for now just catchall.
+						await this.app.fileManager.renameFile(src_note, archived_note_path);
 					} catch (error) {
 						new Notice(`A file called ${archived_note_path} already exists, archival skipped.`);
 					}
@@ -290,6 +287,7 @@ class ObligatorSettingTab extends PluginSettingTab {
 				    .onChange(async value => {
 					this.plugin.settings.template_path = value;
 					await this.plugin.saveSettings();
+					this.display();
 				})
 			});
 

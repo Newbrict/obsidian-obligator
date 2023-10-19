@@ -31,7 +31,6 @@ confused about how to configure the settings:
    these variables will be blank.
 
 ## TO-DO (In priority order)
-* Fix the back linking with the archive mode on.
 * Make the fold state carry over to the new note.
 * Make it so that checked tasks which have unchecked subtasks will get copied
   over anyway.
@@ -41,6 +40,7 @@ confused about how to configure the settings:
   greater weight)
 
 ## Design Philosophy
+
 ### Why does the terminal sequence have to be a header?
 The reason for this is to allow the full to-do list to be folded by the header
 specified by the Obligation Header option. If any other terminal sequence is
