@@ -49,8 +49,9 @@ terminal sequence.
 
 ## Building
 * `yarn install` (install dependencies)
-* `yarn run dev` (compile typescript to javascript `main.js`)
+* `yarn build` (compile typescript to javascript `main.js`)
 * restart Obsidian, or toggle on and off the plugin
+* For development, `yarn dev` listens for changes and rebuilds automatically.
 
 ## Releasing
 * `yarn version`
