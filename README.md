@@ -31,7 +31,9 @@ confused about how to configure the settings:
    these variables will be blank.
 
 ## TO-DO (In priority order)
+* Fix the settings page refreshing killing focus when typing a template file
 * Simplify the settings by removing the start heading.
+* Write documentation explaining how to use the obligate template
 * Make the fold state carry over to the new note.
 * Make it so that checked tasks which have unchecked subtasks will get copied
   over anyway.
