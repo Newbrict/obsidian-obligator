@@ -131,10 +131,15 @@ const merge_structure = (first:Heading, second:Heading) => {
 		} else {
 			// Add missing children
 			if (!first.children.contains(child)) {
-				// Unshift is used because textual children must be at the top
-				// Or else they'll get wrapped into other fold scopes when
-				// heading children are added.
-				first.children.unshift(child);
+				const header_index = first.children.findIndex(c => c instanceof Object);
+				if (header_index > -1) {
+					first.children.splice(header_index, 0, child);
+				} else {
+					first.children.push(child);
+				}
+				// Text children must come before any headers or else they'll
+				// get wrapped into other fold scopes when heading children
+				// are added.
 				first.total += 1;
 			}
 		}

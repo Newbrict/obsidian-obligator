@@ -31,6 +31,8 @@ confused about how to configure the settings:
    these variables will be blank.
 
 ## TO-DO (In priority order)
+* Currently if you have sub-tasks on a recurring note, it won't copy over the
+  sub-tasks properly
 * Fix the settings page refreshing killing focus when typing a template file
 * Simplify the settings by removing the start heading.
 * Write documentation explaining how to use the obligate template
