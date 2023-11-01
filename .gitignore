@@ -25,3 +25,5 @@ data.json
 
 # Exclude direnv directory for nix development
 .direnv
+
+tests/

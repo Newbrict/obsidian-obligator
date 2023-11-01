@@ -31,10 +31,10 @@ confused about how to configure the settings:
    these variables will be blank.
 
 ## TO-DO (In priority order)
+* Simplify the settings by removing the start heading.
 * Make the fold state carry over to the new note.
 * Make it so that checked tasks which have unchecked subtasks will get copied
   over anyway.
-* Add a recurring note template.
 * Add an option to delete empty headings. (probably defined as a heading which
   has no children, where a child is any value except for another heading of
   greater weight)

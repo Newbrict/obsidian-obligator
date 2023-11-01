@@ -38,6 +38,147 @@ const DEFAULT_SETTINGS: ObligatorSettings = {
 	archive_path: ""
 }
 
+const HEADING_REGEX        = /^#{1,7} +\S.*/;
+const HEADING_REGEX_GLOBAL = /^#{1,7} +\S.*/gm;
+
+const get_heading_level = (heading:string|null) => {
+	if (heading) {
+		return heading.replace(/[^#]/g, "").length;
+	}
+	return 0;
+}
+
+type Heading = {
+	heading: string|null;
+	children: (Heading|string)[];
+	total: number;
+}
+
+const structurize = (lines:string[], heading:string|null=null):Heading => {
+	const level = get_heading_level(heading);
+	let total = 0;
+	let children = [];
+	for (let i = 0; i < lines.length; i++) {
+		let line = lines[i];
+		if (HEADING_REGEX.test(line))  {
+			// A lower level means a greater scope.
+			// If this new heading has a lesser or equal level,
+			// then there are no more children, we can return.
+			if (get_heading_level(line) <= level) {
+				break;
+			}
+			const child = structurize(lines.slice(i+1), line);
+			children.push(child);
+			i += child.total;
+			total += child.total;
+		// Since we increment the iterator above, this will always
+		// be children on the same level, so they can be added.
+		} else {
+			children.push(line)
+		}
+		total += 1;
+	}
+	return {heading: heading, children: children, total: total};
+}
+
+const destructure = (structure:Heading):string[] => {
+	let lines = [];
+	if (structure.heading) {
+		lines.push(structure.heading);
+	}
+	for (let i = 0; i < structure.children.length; i++) {
+		const child = structure.children[i];
+		console.log(child)
+		if (child instanceof Object) {
+			console.log("This is an Object");
+			lines.push(...destructure(child))
+		} else {
+			console.log("This is a String");
+			lines.push(child);
+		}
+	}
+	return lines;
+}
+
+// Merges second into first
+// Limitation: Heading paths have to be unique within the structure.
+const merge_structure = (first:Heading, second:Heading) => {
+	// If we receive structures which don't have the same heading, the only
+	// thing we can do is merge them under a new parent
+	if (first.heading !== second.heading) {
+		return {
+			heading: null,
+			children: [first, second],
+			total: first.total + second.total + 2
+		}
+	}
+
+	// Go through each child in second, and check if it's in first
+	second.children.forEach((child) => {
+		if (child instanceof Object) {
+
+			// Ignoring this type check because the code actually works fine.
+			// @ts-ignore
+			const first_child = first.children.find(c => c.heading === child.heading);
+			if (first_child instanceof Object && first_child) {
+				const old_total = first_child.total;
+				merge_structure(first_child, child);
+				first.total += first_child.total-old_total;
+			} else {
+				first.children.push(child);
+				first.total += child.total + 1;
+			}
+		} else {
+			// Add missing children
+			if (!first.children.contains(child)) {
+				// Unshift is used because textual children must be at the top
+				// Or else they'll get wrapped into other fold scopes when
+				// heading children are added.
+				first.children.unshift(child);
+				first.total += 1;
+			}
+		}
+	});
+}
+
+// Merge test structure
+/*
+			const s1 = {
+				heading: null,
+				children: [{
+					heading: "# Something",
+					children: ["test5"],
+					total: 1
+				}],
+				total: 2
+			}
+			const s2 = {
+				heading: null,
+				children: ["test", "test2", {
+					heading: "# Something",
+					children: ["test3"],
+					total: 1
+				}, {
+					heading: "# Something else",
+					children: ["test4", {
+						heading: "## Deeper",
+						children: ["test6"],
+						total: 1
+					}],
+					total: 2
+				}],
+				total: 7
+			}
+			//const heading_index = template_lines.indexOf(this.settings.heading);
+			//const terminal_index = template_lines.indexOf(this.settings.terminal);
+			//const template_structure = structurize(template_lines.slice(heading_index, terminal_index));
+			//const revert = destructure(template_structure);
+			//console.log(template_structure);
+			//console.log(revert);
+			//console.log(template_lines.slice(heading_index, terminal_index));
+*/
+
+
 export default class Obligator extends Plugin {
 	settings: ObligatorSettings;
 
@@ -62,6 +203,8 @@ export default class Obligator extends Plugin {
 				return;
 			}
 			let template_contents = await this.app.vault.read(template_file);
+			const template_lines = template_contents.split('\n')
+
 			// -----------------------------------------------------------------
 			// Fill the template. This isn't done in a separate function because
 			// I use a bunch of variables from this function to fill it.
@@ -192,6 +335,131 @@ export default class Obligator extends Plugin {
 						]
 					);
 				}
+				// ------------------------------------------------------------
+				// Recurring obligations
+				// ------------------------------------------------------------
+				// Before writing out the file, we need to add all of the
+				// recurring obligations.
+				// ------------------------------------------------------------
+				const cron_segment_to_list = (segment:string):number[] => {
+					let output:number[] = [];
+					const range_regex = /^(\d+)-(\d+)$/;
+					for (let r of segment.split(',')) {
+						if (range_regex.test(r)) {
+							// Non-null assertion operator in use here because it can't be null
+							const start:number = parseInt(r.match(range_regex)![1]);
+							const end:number   = parseInt(r.match(range_regex)![2]);
+							const expanded_range = Array.from({length: 1+end-start}, (_, i) => start + i);
+							output = output.concat(expanded_range);
+						} else {
+							output.push(parseInt(r));
+						}
+					}
+					return output.sort((a,b) => a-b);
+				}
+				// https://regex101.com/r/adwhVh/1
+				const obligation = /^\s*{{ *obligate ([\*\-,\d]+) ([\*\-,\d]+) ([\*\-,\d]+) *}}\s*$/;
+				const should_trigger_obligation = (obligation_string:string, test_date:moment.Moment) => {
+					// Parse the cron string
+					// Non-null assertion operator in use here because it can't be null
+					const day_months  = cron_segment_to_list(obligation_string.match(obligation)![1]);
+					const month_years = cron_segment_to_list(obligation_string.match(obligation)![2]);
+					const day_weeks   = cron_segment_to_list(obligation_string.match(obligation)![3]);
+
+					const test_day_month  = parseInt(test_date.format('D'));
+					const test_month_year = parseInt(test_date.format('M'));
+					const test_day_week   =          test_date.day();
+
+					// includes(NaN) covers the * case.
+					const matched_day_month  = (day_months.includes(NaN)  || (day_months.includes(test_day_month)));
+					const matched_month_year = (month_years.includes(NaN) || (month_years.includes(test_month_year)));
+					const matched_day_week   = (day_weeks.includes(NaN)   || (day_weeks.includes(test_day_week)))
+
+					/*
+					// Debugging outputs
+					console.log(`============================================`);
+					console.log(`testing: ${test_date} (${test_date.day()})`);
+					console.log(`against: ${obligation_string}`);
+
+					console.log(`day_months:  ${day_months}`);
+					console.log(`month_years: ${month_years}`);
+					console.log(`day_weeks: ${day_weeks}`);
+
+					console.log(`matched_day_month: ${matched_day_month}`);
+					console.log(`matched_month_year: ${matched_month_year}`);
+					console.log(`matched_day_week: ${matched_day_week}`);
+
+					console.log(`test_day_month: ${test_day_month}`)
+					console.log(`test_month_year: ${test_month_year}`)
+					console.log(`test_day_week: ${test_day_week}`)
+					*/
+
+					if (matched_day_month && matched_month_year && matched_day_week) {
+						return true;
+					}
+					return false;
+				};
+				const template_lines = template_contents.split('\n')
+				let processed_lines = [];
+				for (let i = 0; i < template_lines.length; i++) {
+					const line = template_lines[i];
+					// If this is an obligator line, then go ahead and run the
+					// logic which deterimnes if we should now obligate
+					if (obligation.test(line)) {
+						// console.log(`Testing ${line}`);
+						let should_trigger = false;
+						if (should_trigger_obligation(line, now)) {
+							console.log(`triggered now (${line})`);
+							should_trigger = true;
+						// If there is no source note, then we would only
+						// trigger above.
+						} else if (src_note) {
+							// Walk forward from the source note date (+1) and
+							// check every skipped date.
+							let skipped_moment = window.moment(src_note.basename, this.settings.date_format);
+							while (skipped_moment.add(1, 'd').isBefore(now) && !should_trigger) {
+								should_trigger = should_trigger_obligation(line, skipped_moment);
+							}
+							if (should_trigger) {
+								console.log(`triggered later (${line})`);
+							}
+
+						}
+						// Increment the iterator so we skip over this line
+						i++;
+						if (should_trigger) {
+							// Increment the iterator and get the next line
+							try {
+								processed_lines.push(template_lines[i]);
+							} catch (error) {
+								new Notice("Template malformed, to-do item needs to follow obligator string.");
+								return;
+							}
+						}
+					} else {
+						processed_lines.push(line);
+					}
+				}
+
+				const processed_hi = processed_lines.indexOf(this.settings.heading);
+				const processed_ti = processed_lines.indexOf(this.settings.terminal);
+				const output_hi = output_lines.indexOf(this.settings.heading);
+				const output_ti = output_lines.indexOf(this.settings.terminal);
+				let processed_obligations = structurize(processed_lines.slice(processed_hi, processed_ti));
+				const output_obligations = structurize(output_lines.slice(output_hi, output_ti));
+				merge_structure(
+					processed_obligations,
+					output_obligations
+				);
+				let merged_lines = destructure(processed_obligations);
+
+				Array.prototype.splice.apply(
+					output_lines, [
+						output_hi,
+						output_ti-output_hi,
+						...merged_lines
+					]
+				);
 				output_file = await this.app.vault.create(new_note_path, output_lines.join('\n'));
 				if (this.settings.archive && src_note) {
 					if (this.settings.archive_path === "") {
@@ -248,7 +516,7 @@ class ObligatorSettingTab extends PluginSettingTab {
 			return []
 		}
 		const content = await this.app.vault.read(file);
-		const headings: {[index:string]:any} = Array.from(content.matchAll(/#{1,} .*/g))
+		const headings: {[index:string]:any} = Array.from(content.matchAll(HEADING_REGEX_GLOBAL))
 			.reduce((accumulator, [heading], index) => {
 				return {...accumulator, [index.toString()]: heading};
 		}, {});
