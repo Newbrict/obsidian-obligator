@@ -19,7 +19,6 @@ import {
 } from "./ui";
 
 interface ObligatorSettings {
-	heading: string;
 	terminal: string;
 	date_format: string;
 	template_path: string;
@@ -29,7 +28,6 @@ interface ObligatorSettings {
 }
 
 const DEFAULT_SETTINGS: ObligatorSettings = {
-	heading: "",
 	terminal: "",
 	date_format: "YYYY-MM-DD",
 	template_path: "",
@@ -38,8 +36,9 @@ const DEFAULT_SETTINGS: ObligatorSettings = {
 	archive_path: ""
 }
 
-const HEADING_REGEX        = /^#{1,7} +\S.*/;
+const HEADING_REGEX        = /^#{1,7} +\S.*/m;
 const HEADING_REGEX_GLOBAL = /^#{1,7} +\S.*/gm;
+const CHECKBOX_REGEX = /^\s*-\s+\[[x ]\].*$/m;
 
 const get_heading_level = (heading:string|null) => {
 	if (heading) {
@@ -54,6 +53,8 @@ type Heading = {
 	total: number;
 }
 
+// Structurize takes a set of lines from a note file and structures them
+// hierarchically based on fold scope.
 const structurize = (lines:string[], heading:string|null=null):Heading => {
 	const level = get_heading_level(heading);
 	let total = 0;
@@ -81,6 +82,7 @@ const structurize = (lines:string[], heading:string|null=null):Heading => {
 	return {heading: heading, children: children, total: total};
 }
 
+// Flattens the heirarchy represented by the output of a call to structurize
 const destructure = (structure:Heading):string[] => {
 	let lines = [];
 	if (structure.heading) {
@@ -130,6 +132,8 @@ const merge_structure = (first:Heading, second:Heading) => {
 			}
 		} else {
 			// Add missing children
+			//if (!CHECKBOX_REGEX.test(child) || !first.children.contains(child)) {
+			// TODO For right now kill all duplicates
 			if (!first.children.contains(child)) {
 				const header_index = first.children.findIndex(c => c instanceof Object);
 				if (header_index > -1) {
@@ -282,10 +286,6 @@ export default class Obligator extends Plugin {
 				template_contents = template_contents.replace(/{{previous_note_path}}/g, src_note.path);
 			}
 
-			if (this.settings.heading === "") {
-				new Notice("You must specify the obligation heading in the settings.");
-				return;
-			}
 			if (this.settings.terminal === "") {
 				new Notice("You must specify the terminal heading in the settings.");
 				return;
@@ -303,17 +303,12 @@ export default class Obligator extends Plugin {
 				if (src_note) {
 					let src_content = await this.app.vault.read(src_note);
 					let src_lines = src_content.split('\n')
-					const src_heading_index = src_lines.indexOf(this.settings.heading);
 					const src_terminal_index = src_lines.indexOf(this.settings.terminal);
-					if (src_heading_index === -1) {
-						new Notice("Couldn't find the obligation heading in the last note, aborting.");
-						return;
-					}
 					if (src_terminal_index === -1) {
-						new Notice("Couldn't find the terminal heading in the last note, aborting.");
+						new Notice(`${src_note.basename} does not contain the specified terminal heading... aborting.`);
 						return;
 					}
-					for (let i = src_heading_index+1; i <= src_terminal_index; i++) {
+					for (let i = 0; i <= src_terminal_index; i++) {
 						const line = src_lines[i];
 						const checked = /^\s*- \[x\]/;
 						// only copy over unchecked items
@@ -321,21 +316,16 @@ export default class Obligator extends Plugin {
 							copy_lines.push(line);
 						}
 					}
-					const output_heading_index = output_lines.indexOf(this.settings.heading);
-					if (output_heading_index === -1) {
-						new Notice("Couldn't find the obligation heading in today's note, check your template");
-						return;
-					}
 					const output_terminal_index = output_lines.indexOf(this.settings.terminal);
 					if (output_terminal_index === -1) {
-						new Notice("Couldn't find the terminal heading in today's note, check your template");
+						new Notice("Your template file does not contain the specified terminal heading... aborting.");
 						return;
 					}
 					Array.prototype.splice.apply(
 						output_lines,
 						[
-							output_heading_index+1,
-							output_terminal_index - output_heading_index,
+							0,
+							output_terminal_index+1,
 							...copy_lines
 						]
 					);
@@ -446,12 +436,10 @@ export default class Obligator extends Plugin {
 					}
 				}
 
-				const processed_hi = processed_lines.indexOf(this.settings.heading);
 				const processed_ti = processed_lines.indexOf(this.settings.terminal);
-				const output_hi = output_lines.indexOf(this.settings.heading);
 				const output_ti = output_lines.indexOf(this.settings.terminal);
-				let processed_obligations = structurize(processed_lines.slice(processed_hi, processed_ti));
-				const output_obligations = structurize(output_lines.slice(output_hi, output_ti));
+				let processed_obligations = structurize(processed_lines.slice(0, processed_ti));
+				const output_obligations = structurize(output_lines.slice(0, output_ti));
 				merge_structure(
 					processed_obligations,
 					output_obligations
@@ -460,8 +448,8 @@ export default class Obligator extends Plugin {
 
 				Array.prototype.splice.apply(
 					output_lines, [
-						output_hi,
-						output_ti-output_hi,
+						0,
+						output_ti,
 						...merged_lines
 					]
 				);
@@ -511,14 +499,24 @@ class ObligatorSettingTab extends PluginSettingTab {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
-
-	async getHeadings() {
-		let file = this.app.vault.getAbstractFileByPath(this.plugin.settings.template_path);
+	async is_file(file_path:string) {
+		let file = this.app.vault.getAbstractFileByPath(file_path);
 		if (file === null) {
-			file = this.app.vault.getAbstractFileByPath(`${this.plugin.settings.template_path}.md`);
+			file = this.app.vault.getAbstractFileByPath(`${file_path}.md`);
 		}
 		if (file === null || !(file instanceof TFile)) {
-			return []
+			return false;
+		}
+		return true;
+	}
+
+	async getHeadings(file_path:string) {
+		let file = this.app.vault.getAbstractFileByPath(file_path);
+		if (file === null) {
+			file = this.app.vault.getAbstractFileByPath(`${file_path}.md`);
+		}
+		if (file === null || !(file instanceof TFile)) {
+			return [];
 		}
 		const content = await this.app.vault.read(file);
 		const headings: {[index:string]:any} = Array.from(content.matchAll(HEADING_REGEX_GLOBAL))
@@ -557,10 +555,14 @@ class ObligatorSettingTab extends PluginSettingTab {
 			.addText(text => {
 				new FileSuggest(this.app, text.inputEl);
 				text.setValue(this.plugin.settings.template_path)
-				    .onChange(async value => {
-					this.plugin.settings.template_path = value;
-					await this.plugin.saveSettings();
-					this.display();
+				.onChange(async value => {
+					const check = await this.is_file(value);
+					if (check) {
+						console.log(value);
+						this.plugin.settings.template_path = value;
+						await this.plugin.saveSettings();
+						this.display();
+					}
 				})
 			});
 
@@ -599,53 +601,24 @@ class ObligatorSettingTab extends PluginSettingTab {
 		);
 
 		// --------------------------------------------------------------------
-		// Create the dropdown options for the two heading selections
+		// Create the dropdown options for the terminal heading selection
 		// --------------------------------------------------------------------
-		const level = (str: string) => {
-			return str.split("#").length - 1;
-		};
-		const all_headings = await this.getHeadings();
-		const heading_value = Object.keys(all_headings)
-			.find(key => all_headings[key] === this.plugin.settings.heading) || "";
-		const terminal_value = Object.keys(all_headings)
-			.find(key => all_headings[key] === this.plugin.settings.terminal) || "";
-		const headings = Object.fromEntries(
-			Object.entries(all_headings).filter(([k, v]) =>
-				terminal_value == ""
-				|| (terminal_value > k && level(v) <= level(all_headings[terminal_value]))
-			)
-		);
-		const terminal_headings = Object.fromEntries(
-			Object.entries(all_headings).filter(([k, v]) => k>heading_value)
-		);
-		// --------------------------------------------------------------------
-		// The heading which contains the to-do list items
-		// --------------------------------------------------------------------
-		new Setting(containerEl)
-			.setName('Obligation Heading')
-			.setDesc("The heading from the template which will contain all of your to-do list items")
-			.addDropdown(dropdown => dropdown
-				.addOptions(headings)
-				.setValue(heading_value)
-				.onChange(async value => {
-					this.plugin.settings.heading = headings[value] || null;
-					await this.plugin.saveSettings();
-					this.display();
-				})
-			);
+		const headings = await this.getHeadings(this.plugin.settings.template_path);
+		const terminal_value = Object.keys(headings)
+			.find(key => headings[key] === this.plugin.settings.terminal)
+			|| "";
 		// --------------------------------------------------------------------
 		// The heading which terminates the to-do list items
 		// --------------------------------------------------------------------
 		new Setting(containerEl)
 			.setName('Terminal Heading')
-			.setDesc(`The heading from the template which terminates the to-do list items. Everything between the "Obligation Heading" and this heading in your daily note will be copied over. The terminal heading must be at a level greater or equal to the "Obligation Heading" option, i.e. you can't terminate an H2 (##) with an H3 (###) but you can with another H2 or an H1 (#).`)
+			.setDesc(`The heading from the template which terminates what Obligator will copy. Everything between the start of the note and this heading in your daily note will be copied over.`)
 			.addDropdown(dropdown => dropdown
-				.addOptions(terminal_headings)
+				.addOptions(headings)
 				.setValue(terminal_value)
 				.onChange(async value => {
-					this.plugin.settings.terminal = terminal_headings[value] || null;
+					this.plugin.settings.terminal = headings[value] || null;
 					await this.plugin.saveSettings();
-					this.display();
 				})
 			);
 		// --------------------------------------------------------------------
