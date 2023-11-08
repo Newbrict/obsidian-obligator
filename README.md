@@ -20,9 +20,9 @@ reflecting today's date. If it does exist, it will simply bring you to the
 existing file.
 
 See the [example template file](example/daily_note.md) for some inspiration on
-how to set up your daily note. Also see this sample settings page if you're
-confused about how to configure the settings:
-![](example/settings.png)
+how to set up your daily note. Here is an animation showing a valid template and
+a how to set up the settings properly with that template:
+![](example/settings.gif)
 
 ### Template variables
  * {{date}}, {{time}}, and {{title}} work as they normally would.
