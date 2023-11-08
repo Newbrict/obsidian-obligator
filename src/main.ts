@@ -118,6 +118,7 @@ export default class Obligator extends Plugin {
 			// Make sure the default value is applied if it's left blank
 			const DATE_FORMAT = this.settings.date_format || DEFAULT_SETTINGS.date_format;
 			const NOTE_NAME = NOW.format(DATE_FORMAT);
+			const ACTIVE_LEAF = this.app.workspace.getLeaf();
 
 			// ----------------------------------------------------------------
 			// Step 2
@@ -126,8 +127,7 @@ export default class Obligator extends Plugin {
 			const NEW_NOTE_PATH = `${this.settings.note_path}/${NOTE_NAME}.md`
 			let output_file = this.app.vault.getAbstractFileByPath(NEW_NOTE_PATH);
 			if (output_file != undefined && output_file instanceof TFile) {
-				const active_leaf = this.app.workspace.getLeaf();
-				await active_leaf.openFile(output_file);
+				await ACTIVE_LEAF.openFile(output_file);
 				return;
 			}
 
@@ -280,6 +280,7 @@ export default class Obligator extends Plugin {
 			let new_note_lines = destructure(template_structure).concat(OUTPUT_TERMINAL_LINES);
 
 			output_file = await this.app.vault.create(NEW_NOTE_PATH, new_note_lines.join('\n'));
+
 			if (this.settings.archive && last_note) {
 				const archived_note_path = `${this.settings.archive_path}/${last_note.basename}.md`;
 				try {
@@ -289,7 +290,10 @@ export default class Obligator extends Plugin {
 				}
 			}
 
-			return;
+			// Open up the new file
+			if (output_file != undefined && output_file instanceof TFile) {
+				await ACTIVE_LEAF.openFile(output_file);
+			}
 		});
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
