@@ -1,6 +1,8 @@
 export const HEADING_REGEX        = /^#{1,7} +\S.*/m;
 export const HEADING_REGEX_GLOBAL = /^#{1,7} +\S.*/gm;
 export const CHECKBOX_REGEX = /^\s*-\s+\[[x ]\].*$/m;
+export const UNCHECKEDBOX_REGEX = /^\s*-\s+\[ \].*$/m;
+export const CHECKEDBOX_REGEX = /^\s*-\s+\[x\].*$/m;
 
 export function get_heading_level(heading:string|null) {
 	if (heading) {
@@ -52,13 +54,16 @@ export function destructure(structure:Heading):string[] {
 	}
 	for (let i = 0; i < structure.children.length; i++) {
 		const child = structure.children[i];
-		console.log(child)
+		//console.log(child)
 		if (child instanceof Object) {
-			console.log("This is an Object");
+			//console.log("This is an Object");
 			lines.push(...destructure(child))
 		} else {
-			console.log("This is a String");
-			lines.push(child);
+			//console.log("This is a String");
+			// delete'd items from the filter function will be undefined
+			if (child !== undefined) {
+				lines.push(child);
+			}
 		}
 	}
 	return lines;
@@ -111,6 +116,61 @@ export function merge_structure (first:Heading, second:Heading) {
 		}
 	});
 }
+
+export function filter_structure(structure:Heading) {
+	for (let i = 0; i < structure.children.length; i++) {
+		const child = structure.children[i];
+		if (child instanceof Object) {
+			filter_structure(child)
+		} else {
+			if (CHECKEDBOX_REGEX.test(child)) {
+				delete structure.children[i];
+				structure.total = structure.total - 1;
+			}
+		}
+	}
+};
+
+export function cron_segment_to_list(segment:string):number[] {
+	let output:number[] = [];
+	const RANGE_REGEX = /^(\d+)-(\d+)$/;
+	for (let r of segment.split(',')) {
+		if (RANGE_REGEX.test(r)) {
+			// Non-null assertion operator in use here because it can't be null
+			const start:number = parseInt(r.match(RANGE_REGEX)![1]);
+			const end:number   = parseInt(r.match(RANGE_REGEX)![2]);
+			const expanded_range = Array.from({length: 1+end-start}, (_, i) => start + i);
+			output = output.concat(expanded_range);
+		} else {
+			output.push(parseInt(r));
+		}
+	}
+	return output.sort((a,b) => a-b);
+}
+
+// https://regex101.com/r/adwhVh/1
+export const OBLIGATION_REGEX = /^\s*{{ *obligate ([\*\-,\d]+) ([\*\-,\d]+) ([\*\-,\d]+) *}}\s*$/;
+export function should_trigger_obligation(obligation_string:string, test_date:moment.Moment):boolean {
+	// Parse the cron string
+	// Non-null assertion operator in use here because it can't be null
+	const day_months  = cron_segment_to_list(obligation_string.match(OBLIGATION_REGEX)![1]);
+	const month_years = cron_segment_to_list(obligation_string.match(OBLIGATION_REGEX)![2]);
+	const day_weeks   = cron_segment_to_list(obligation_string.match(OBLIGATION_REGEX)![3]);
+
+	const test_day_month  = parseInt(test_date.format('D'));
+	const test_month_year = parseInt(test_date.format('M'));
+	const test_day_week   =          test_date.day();
+
+	// includes(NaN) covers the * case.
+	const matched_day_month  = (day_months.includes(NaN)  || (day_months.includes(test_day_month)));
+	const matched_month_year = (month_years.includes(NaN) || (month_years.includes(test_month_year)));
+	const matched_day_week   = (day_weeks.includes(NaN)   || (day_weeks.includes(test_day_week)))
+
+	if (matched_day_month && matched_month_year && matched_day_week) {
+		return true;
+	}
+	return false;
+};
 
 // Merge test structure
 /*

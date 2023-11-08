@@ -43,8 +43,6 @@ a how to set up the settings properly with that template:
    help, just open a GitHub issue.
 
 ## TO-DO (In priority order)
-* Fix the bug which causes obligator templates to be copied without being
-  processed when there is no previous note. (Initial condition bug.)
 * Currently if you have sub-tasks on a recurring note, it won't copy over the
   sub-tasks properly
 * Make the fold state carry over to the new note.
