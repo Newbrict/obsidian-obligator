@@ -43,8 +43,6 @@ const DEFAULT_SETTINGS: ObligatorSettings = {
 	archive_path: ""
 }
 
-
-
 export default class Obligator extends Plugin {
 	settings: ObligatorSettings;
 
@@ -414,11 +412,12 @@ class ObligatorSettingTab extends PluginSettingTab {
 				text.setValue(this.plugin.settings.template_path)
 				.onChange(async value => {
 					const check = await this.is_file(value);
-					if (check) {
-						console.log(value);
+					if (check || value === "" ) {
 						this.plugin.settings.template_path = value;
 						await this.plugin.saveSettings();
-						this.display();
+						if (check) {
+							this.display();
+						}
 					}
 				})
 			});
