@@ -1,30 +1,29 @@
 # Obligator
 
 Obligator replaces and extends the function of the built in daily-notes plugin.
-This plugin will copy over all of the contents of your daily note file to the
-new one *except for* checked boxes.
-
 Unchecked to-do items will be copied over to the new daily note, along with all
-of the headings and formatting structure you used to organize them. It is a
-convenient way to manage your to-do list, and leaves you with running history
-of to-do items that you can reference if you need to.
-
+of the headings and formatting structure you used to organize them, and any
+scheduled notes that you've set up. It is a convenient way to manage your
+to-do list, and leaves you with running history of notes that you can
+reference if you want to.
 
 ![](preview.gif)
 
 ## How to use Obligator
 
 Make sure you have fully filled out the settings page, then click the carrot
-icon. If today's note doesn't already exist, a new note file will be made
-reflecting today's date. If it does exist, it will simply bring you to the
-existing file.
+icon on the sidebar to open your daily note. If today's note doesn't already
+exist, a new note file will be made reflecting today's date. If it does exist,
+it will simply bring you to the existing file -- so feel free to click that
+carrot to your hearts content.
 
 See the [example template file](example/daily_note.md) for some inspiration on
 how to set up your daily note. Here is an animation showing a valid template and
 a how to set up the settings properly with that template:
+
 ![](example/settings.gif)
 
-### Template variables
+### Template macros
  * {{date}}, {{time}}, and {{title}} work as they normally would.
 
 
@@ -32,11 +31,11 @@ a how to set up the settings properly with that template:
    previous note from the current note. If there is no previous note, then
    these variables will be blank.
 
- * {{ obligate * * * }} is a very powerful template. It lets you set up
+ * {{ obligate * * * }} is a very powerful macro. It lets you set up
    recurring to-do items in your template. It uses a simplified version of the
    cron syntax, where the asterisk represent day-of-the-month,
    month-of-the-year, and day-of-the-week in that order. See [crontab.guru](https://crontab.guru)
-   to play around with the syntax. The obligate template will add the immediately
+   to play around with the syntax. The obligate macro will add the immediately
    proceeding line if you the date matches **for any day between your
    last note and today**. See the [example template file](example/daily_note.md)
    for plenty of common examples. If you are confused about this and want some
