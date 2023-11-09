@@ -48,9 +48,6 @@ a how to set up the settings properly with that template:
 * Make the fold state carry over to the new note.
 * Make it so that checked tasks which have unchecked subtasks will get copied
   over anyway.
-* Add an option to delete empty headings. (probably defined as a heading which
-  has no children, where a child is any value except for another heading of
-  greater weight)
 
 ## Building
 * `yarn install` (install dependencies)

@@ -37,6 +37,7 @@ interface ObligatorSettings {
 	note_path: string;
 	archive: boolean;
 	archive_path: string;
+	delete_empty_headings: boolean;
 }
 
 const DEFAULT_SETTINGS: ObligatorSettings = {
@@ -45,7 +46,8 @@ const DEFAULT_SETTINGS: ObligatorSettings = {
 	template_path: "",
 	note_path: "",
 	archive: false,
-	archive_path: ""
+	archive_path: "",
+	delete_empty_headings: true
 }
 
 const NOW = window.moment();
@@ -276,7 +278,7 @@ export default class Obligator extends Plugin {
 				);
 			}
 
-			filter_structure(template_structure);
+			filter_structure(template_structure, this.settings.delete_empty_headings);
 			let new_note_lines = destructure(template_structure).concat(OUTPUT_TERMINAL_LINES);
 
 			output_file = await this.app.vault.create(NEW_NOTE_PATH, new_note_lines.join('\n'));
@@ -467,5 +469,21 @@ class ObligatorSettingTab extends PluginSettingTab {
 				})
 			});
 
+		// --------------------------------------------------------------------
+		// Toggle for the setting to delete empty headings.
+		// --------------------------------------------------------------------
+		new Setting(containerEl)
+			.setName("Delete empty headings")
+			.setDesc(`If this is enabled, obligator will automatically delete
+					 headings which don't have any non-whitespace children when
+					 you create a new daily note. Turning this off will leave
+					 all headings untouched, even if they have no contents.`)
+			.addToggle(toggle => { toggle
+				.setValue(this.plugin.settings.delete_empty_headings)
+			    .onChange(async value => {
+					this.plugin.settings.delete_empty_headings = value;
+					await this.plugin.saveSettings();
+			})
+		})
 	}
 }

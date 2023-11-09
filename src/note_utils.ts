@@ -1,8 +1,13 @@
 export const HEADING_REGEX        = /^#{1,7} +\S.*/m;
 export const HEADING_REGEX_GLOBAL = /^#{1,7} +\S.*/gm;
+
+// https://regex101.com/r/9nJcNX/1
 export const CHECKBOX_REGEX = /^\s*-\s+\[[x ]\].*$/m;
 export const UNCHECKEDBOX_REGEX = /^\s*-\s+\[ \].*$/m;
 export const CHECKEDBOX_REGEX = /^\s*-\s+\[x\].*$/m;
+
+// https://regex101.com/r/adwhVh/1
+export const OBLIGATION_REGEX = /^\s*{{ *obligate ([\*\-,\d]+) ([\*\-,\d]+) ([\*\-,\d]+) *}}\s*$/;
 
 export function get_heading_level(heading:string|null) {
 	if (heading) {
@@ -11,16 +16,16 @@ export function get_heading_level(heading:string|null) {
 	return 0;
 }
 
-type Heading = {
-	heading: string|null;
-	children: (Heading|string)[];
+type Parent = {
+	text: string|null;
+	children: (Parent|string)[];
 	total: number;
 }
 
 // Structurize takes a set of lines from a note file and structures them
 // hierarchically based on fold scope.
-export function structurize(lines:string[], heading:string|null=null):Heading {
-	const level = get_heading_level(heading);
+export function structurize(lines:string[], text:string|null=null):Parent {
+	const level = get_heading_level(text);
 	let total = 0;
 	let children = [];
 	for (let i = 0; i < lines.length; i++) {
@@ -43,14 +48,14 @@ export function structurize(lines:string[], heading:string|null=null):Heading {
 		}
 		total += 1;
 	}
-	return {heading: heading, children: children, total: total};
+	return {text: text, children: children, total: total};
 }
 
 // Flattens the heirarchy represented by the output of a call to structurize
-export function destructure(structure:Heading):string[] {
+export function destructure(structure:Parent):string[] {
 	let lines = [];
-	if (structure.heading) {
-		lines.push(structure.heading);
+	if (structure.text) {
+		lines.push(structure.text);
 	}
 	for (let i = 0; i < structure.children.length; i++) {
 		const child = structure.children[i];
@@ -70,13 +75,13 @@ export function destructure(structure:Heading):string[] {
 }
 
 // Merges second into first
-// Limitation: Heading paths have to be unique within the structure.
-export function merge_structure (first:Heading, second:Heading) {
+// Limitation: Parent paths have to be unique within the structure.
+export function merge_structure (first:Parent, second:Parent) {
 	// If we receive structures which don't have the same heading, the only
 	// thing we can do is merge them under a new parent
-	if (first.heading !== second.heading) {
+	if (first.text !== second.text) {
 		return {
-			heading: null,
+			text: null,
 			children: [first, second],
 			total: first.total + second.total + 2
 		}
@@ -88,7 +93,7 @@ export function merge_structure (first:Heading, second:Heading) {
 
 			// Ignoring this type check because the code actually works fine.
 			// @ts-ignore
-			const first_child = first.children.find(c => c.heading === child.heading);
+			const first_child = first.children.find(c => c.text === child.text);
 			if (first_child instanceof Object && first_child) {
 				const old_total = first_child.total;
 				merge_structure(first_child, child);
@@ -108,7 +113,7 @@ export function merge_structure (first:Heading, second:Heading) {
 				} else {
 					first.children.push(child);
 				}
-				// Text children must come before any headers or else they'll
+				// Text children must come before any headings or else they'll
 				// get wrapped into other fold scopes when heading children
 				// are added.
 				first.total += 1;
@@ -117,11 +122,17 @@ export function merge_structure (first:Heading, second:Heading) {
 	});
 }
 
-export function filter_structure(structure:Heading) {
+export function filter_structure(structure:Parent, delete_headings:boolean) {
 	for (let i = 0; i < structure.children.length; i++) {
 		const child = structure.children[i];
 		if (child instanceof Object) {
-			filter_structure(child)
+			filter_structure(child, delete_headings)
+			if (delete_headings) {
+				if (child.children.filter((element) => /\s/.test(element)).length === 0) {
+					delete structure.children[i];
+					structure.total = structure.total - child.children.length;
+				}
+			}
 		} else {
 			if (CHECKEDBOX_REGEX.test(child)) {
 				delete structure.children[i];
@@ -129,6 +140,7 @@ export function filter_structure(structure:Heading) {
 			}
 		}
 	}
+	structure.children = structure.children.filter((element) => element !== undefined);
 };
 
 export function cron_segment_to_list(segment:string):number[] {
@@ -148,8 +160,6 @@ export function cron_segment_to_list(segment:string):number[] {
 	return output.sort((a,b) => a-b);
 }
 
-// https://regex101.com/r/adwhVh/1
-export const OBLIGATION_REGEX = /^\s*{{ *obligate ([\*\-,\d]+) ([\*\-,\d]+) ([\*\-,\d]+) *}}\s*$/;
 export function should_trigger_obligation(obligation_string:string, test_date:moment.Moment):boolean {
 	// Parse the cron string
 	// Non-null assertion operator in use here because it can't be null
@@ -175,24 +185,24 @@ export function should_trigger_obligation(obligation_string:string, test_date:mo
 // Merge test structure
 /*
 			const s1 = {
-				heading: null,
+				text: null,
 				children: [{
-					heading: "# Something",
+					text: "# Something",
 					children: ["test5"],
 					total: 1
 				}],
 				total: 2
 			}
 			const s2 = {
-				heading: null,
+				text: null,
 				children: ["test", "test2", {
-					heading: "# Something",
+					text: "# Something",
 					children: ["test3"],
 					total: 1
 				}, {
-					heading: "# Something else",
+					text: "# Something else",
 					children: ["test4", {
-						heading: "## Deeper",
+						text: "## Deeper",
 						children: ["test6"],
 						total: 1
 					}],
