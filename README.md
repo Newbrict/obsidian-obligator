@@ -1,6 +1,6 @@
 # Obligator
 
-Obligator replaces and extends the function of the built in daily-notes plugin.
+Obligator replaces and extends the function of the built in `Daily notes` plugin.
 Unchecked to-do items will be copied over to the new daily note, along with all
 of the headings and formatting structure you used to organize them, and any
 scheduled notes that you've set up. It is a convenient way to manage your
