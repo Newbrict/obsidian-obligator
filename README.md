@@ -42,7 +42,7 @@ a how to set up the settings properly with that template:
    help, just open a GitHub issue.
 
 ## Comparison with rollover-daily-todos
-My motivation to create this project is that my to-do list is extensive, with
+I was motivated to create this project because my to-do list is extensive, with
 lots offormatting that I wanted to maintain between notes, but rollover-daily-todos
 copies *only* the unchecked to-do items and places them all into a specified
 header, killing all of the formatting.
@@ -50,18 +50,19 @@ header, killing all of the formatting.
 Here is a basic overview of the differences between the two:
 
 - Obligator copies over all unchecked to-do items as well as all the formatting
-  that they were in.
+  that wraps them.
+
 - Rollover-daily-todos only copies unchecked to-do items, and places them under
   one heading.
 
 - Obligator does not rely on the `Daily notes` or `Periodic notes` plugin.
 
 - Obligator has the {{ obligate * * * }} macro for automatically scheduling
-  to-do items in new notes
+  to-do items in new notes.
 
-- Obligator has an old note archiving feature to keep your notes directory clean
+- Obligator has an old note archiving feature to keep your notes directory clean.
 
-- Obligator has the ability to delete empty headings
+- Obligator has the ability to delete empty headings to keep your daily note clean.
 
 - & More!
 
