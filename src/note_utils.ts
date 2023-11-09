@@ -16,7 +16,7 @@ export function get_heading_level(heading:string|null) {
 	return 0;
 }
 
-type Parent = {
+interface Parent {
 	text: string|null;
 	children: (Parent|string)[];
 	total: number;
@@ -128,7 +128,9 @@ export function filter_structure(structure:Parent, delete_headings:boolean) {
 		if (child instanceof Object) {
 			filter_structure(child, delete_headings)
 			if (delete_headings) {
-				if (child.children.filter((element) => /\s/.test(element)).length === 0) {
+				// TODO this typeof check is kind of sketchy.
+				if (child.children.filter((element) => typeof element === "object"
+										            || /\s/.test(element)).length === 0) {
 					delete structure.children[i];
 					structure.total = structure.total - child.children.length;
 				}
