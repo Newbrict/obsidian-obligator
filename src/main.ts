@@ -50,8 +50,6 @@ const DEFAULT_SETTINGS: ObligatorSettings = {
 	delete_empty_headings: true
 }
 
-const NOW = window.moment();
-
 export default class Obligator extends Plugin {
 	settings: ObligatorSettings;
 
@@ -118,6 +116,7 @@ export default class Obligator extends Plugin {
 			}
 
 			// Make sure the default value is applied if it's left blank
+			const NOW = window.moment();
 			const DATE_FORMAT = this.settings.date_format || DEFAULT_SETTINGS.date_format;
 			const NOTE_NAME = NOW.format(DATE_FORMAT);
 			const ACTIVE_LEAF = this.app.workspace.getLeaf();
