@@ -3,7 +3,7 @@
 	"name": "Obligator",
 	"version": "3.4.2",
 	"minAppVersion": "0.15.0",
-	"description": "A replacement for daily-todos which functions like a virtual bullet journal by copying over unchecked todo items",
+	"description": "A fully featured replacement for the built-in daily notes plugin. Obligator functions like a virtual bullet journal by copying over unchecked to-do items to your new daily note, along with adding any scheduled items you've set up",
 	"author": "Dimitar Dimitrov",
 	"isDesktopOnly": false
 }
