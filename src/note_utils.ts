@@ -119,22 +119,29 @@ export function merge_structure (first:Parent, second:Parent) {
 			// Ignoring this type check because the code actually works fine.
 			// @ts-ignore
 			const first_child = first.children.find(c => c.text === child.text);
-			if (first_child instanceof Object && first_child) {
+			if (first_child && first_child instanceof Object) {
 				const old_total = first_child.total;
 				merge_structure(first_child, child);
 				first.total += first_child.total-old_total;
 			} else {
-				first.children.push(child);
-				first.total += child.total + 1;
+				if (child.text && CHECKBOX_REGEX.test(child.text)) {
+					const heading_index = first.children.findIndex(c => c instanceof Object && c.text && HEADING_REGEX.test(c.text));
+					if (heading_index > -1) {
+						first.children.splice(heading_index, 0, child);
+					} else {
+						first.children.push(child);
+					}
+				} else {
+					first.children.push(child);
+					first.total += child.total + 1;
+				}
 			}
 		} else {
 			// Add missing children
-			//if (!CHECKBOX_REGEX.test(child) || !first.children.contains(child)) {
-			// TODO For right now kill all duplicates
 			if (!first.children.contains(child)) {
-				const header_index = first.children.findIndex(c => c instanceof Object);
-				if (header_index > -1) {
-					first.children.splice(header_index, 0, child);
+				const heading_index = first.children.findIndex(c => c instanceof Object && c.text && HEADING_REGEX.test(c.text));
+				if (heading_index > -1) {
+					first.children.splice(heading_index, 0, child);
 				} else {
 					first.children.push(child);
 				}
