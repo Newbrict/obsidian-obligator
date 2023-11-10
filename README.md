@@ -64,6 +64,10 @@ Here is a basic overview of the differences between the two:
 
 - Obligator has the ability to delete empty headings to keep your daily note clean.
 
+- Obligator deals with nested to-do items hierarchically, so a checked parent with
+  any amount of unchecked children will get copied over wholly to preserve the
+  structure.
+
 - & More!
 
 ## TO-DO (In priority order)
