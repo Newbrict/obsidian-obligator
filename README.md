@@ -7,7 +7,7 @@ scheduled notes that you've set up. It is a convenient way to manage your
 to-do list, and leaves you with running history of notes that you can
 reference if you want to.
 
-![](preview.gif)
+![](example/preview.gif)
 
 ## How to use Obligator
 
