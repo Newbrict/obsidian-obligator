@@ -67,11 +67,9 @@ Here is a basic overview of the differences between the two:
 - & More!
 
 ## TO-DO (In priority order)
-* Currently if you have sub-tasks on a recurring note, it won't copy over the
-  sub-tasks properly
 * Make the fold state carry over to the new note.
-* Make it so that checked tasks which have unchecked subtasks will get copied
-  over anyway.
+* Delete empty headings should retain headings present in the template. Or at
+  least there should be an option for that.
 
 ## Building
 * `yarn install` (install dependencies)

@@ -1,17 +1,25 @@
 export const HEADING_REGEX        = /^#{1,7} +\S.*/m;
 export const HEADING_REGEX_GLOBAL = /^#{1,7} +\S.*/gm;
 
-// https://regex101.com/r/9nJcNX/1
-export const CHECKBOX_REGEX = /^\s*-\s+\[[x ]\].*$/m;
-export const UNCHECKEDBOX_REGEX = /^\s*-\s+\[ \].*$/m;
-export const CHECKEDBOX_REGEX = /^\s*-\s+\[x\].*$/m;
+// https://regex101.com/r/YfdnA8/1
+export const CHECKBOX_REGEX = /^(\s*)-\s+\[[x \/]\].*$/m;
+export const UNCHECKEDBOX_REGEX = /^\s*-\s+\[[ \/]\].*$/m;
+export const CHECKEDBOX_REGEX = /^\s*-\s+\[[x]\].*$/m;
 
 // https://regex101.com/r/adwhVh/1
 export const OBLIGATION_REGEX = /^\s*{{ *obligate ([\*\-,\d]+) ([\*\-,\d]+) ([\*\-,\d]+) *}}\s*$/;
 
 export function get_heading_level(heading:string|null) {
-	if (heading) {
+	if (heading && HEADING_REGEX.test(heading)) {
 		return heading.replace(/[^#]/g, "").length;
+	}
+	return 0;
+}
+
+export function get_checkbox_level(checkbox:string|null) {
+	if (checkbox && CHECKBOX_REGEX.test(checkbox)) {
+		// This is offset by 1 so that the logic matches the heading logic
+		return checkbox.replace(CHECKBOX_REGEX, "$1").length + 1;
 	}
 	return 0;
 }
@@ -25,25 +33,41 @@ interface Parent {
 // Structurize takes a set of lines from a note file and structures them
 // hierarchically based on fold scope.
 export function structurize(lines:string[], text:string|null=null):Parent {
-	const level = get_heading_level(text);
+	const parent_heading_level = get_heading_level(text);
+	const parent_checkbox_level = get_checkbox_level(text);
 	let total = 0;
 	let children = [];
 	for (let i = 0; i < lines.length; i++) {
-		let line = lines[i];
-		if (HEADING_REGEX.test(line))  {
-			// A lower level means a greater scope.
-			// If this new heading has a lesser or equal level,
-			// then there are no more children, we can return.
-			if (get_heading_level(line) <= level) {
-				break;
-			}
+		const line = lines[i];
+		const is_heading = HEADING_REGEX.test(line);
+		const is_checkbox = CHECKBOX_REGEX.test(line);
+
+		// A heading cannot be a child of a checkbox. text is checked here
+		// because it can be null when invoked
+		if (is_heading && text && CHECKBOX_REGEX.test(text)) {
+			break;
+		}
+
+		// A lower level means a greater scope. If this new heading has a
+		// lesser or equal level, then there are no more children, we can
+		// stop processing.
+		if (is_heading && get_heading_level(line) <= parent_heading_level) {
+			break;
+		}
+		if (is_checkbox && get_checkbox_level(line) <= parent_checkbox_level) {
+			break;
+		}
+
+		// If this is a foldable, then we do the recursive step, otherwise we
+		// can simply add the child to the list of children
+		if (is_heading || is_checkbox) {
 			const child = structurize(lines.slice(i+1), line);
 			children.push(child);
 			i += child.total;
 			total += child.total;
-		// Since we increment the iterator above, this will always
-		// be children on the same level, so they can be added.
 		} else {
+			// Since we increment the iterator above, this will always
+			// be children on the same level, so they can be added.
 			children.push(line)
 		}
 		total += 1;
@@ -65,6 +89,7 @@ export function destructure(structure:Parent):string[] {
 			lines.push(...destructure(child))
 		} else {
 			//console.log("This is a String");
+			//TODO can probably be deleted now
 			// delete'd items from the filter function will be undefined
 			if (child !== undefined) {
 				lines.push(child);
@@ -125,20 +150,33 @@ export function merge_structure (first:Parent, second:Parent) {
 export function filter_structure(structure:Parent, delete_headings:boolean) {
 	for (let i = 0; i < structure.children.length; i++) {
 		const child = structure.children[i];
-		if (child instanceof Object) {
+		if (typeof child === "object") {
 			filter_structure(child, delete_headings)
-			if (delete_headings) {
-				// TODO this typeof check is kind of sketchy.
-				if (child.children.filter((element) => typeof element === "object"
-										            || /\s/.test(element)).length === 0) {
-					delete structure.children[i];
-					structure.total = structure.total - child.children.length;
+			// child.text is checked here because it can be null when invoked.
+			if (child.text) {
+				if (HEADING_REGEX.test(child.text)) {
+					if (delete_headings) {
+						const non_empty = child.children.filter((element) =>  {
+							if (typeof element === "object") {
+								return true;
+							} else {
+								if (!/^\s*$/m.test(element)) {
+									return true;
+								}
+							}
+							return false;
+						});
+						if (non_empty.length === 0) {
+							delete structure.children[i];
+							structure.total = structure.total - child.children.length;
+						}
+					}
 				}
-			}
-		} else {
-			if (CHECKEDBOX_REGEX.test(child)) {
-				delete structure.children[i];
-				structure.total = structure.total - 1;
+				// Only delete checkedboxes if they have no unchecked children
+				if (CHECKEDBOX_REGEX.test(child.text) && child.children.length === 0) {
+					delete structure.children[i];
+					structure.total = structure.total - 1;
+				}
 			}
 		}
 	}
