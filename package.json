@@ -1,6 +1,6 @@
 {
 	"name": "obligator",
-	"version": "3.10.0",
+	"version": "3.11.0",
 	"description": "Obligator is a replacement for daily-todos which copies over unchecked todo items under a specified header",
 	"main": "main.js",
 	"scripts": {
