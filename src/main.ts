@@ -39,6 +39,7 @@ interface ObligatorSettings {
 	archive: boolean;
 	archive_path: string;
 	delete_empty_headings: boolean;
+	run_on_startup: boolean;
 }
 
 const DEFAULT_SETTINGS: ObligatorSettings = {
@@ -48,7 +49,8 @@ const DEFAULT_SETTINGS: ObligatorSettings = {
 	note_path: "",
 	archive: false,
 	archive_path: "",
-	delete_empty_headings: true
+	delete_empty_headings: true,
+	run_on_startup: false
 }
 
 export default class Obligator extends Plugin {
@@ -57,9 +59,7 @@ export default class Obligator extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
-		// This creates an icon in the left ribbon. This function is called
-		// when the user clicks the icon.
-		const ribbonIconEl = this.addRibbonIcon('carrot', `Open today's obligator note`, async (evt: MouseEvent) => {
+		const run_obligator = async () => {
 
 			// ----------------------------------------------------------------
 			// Basic logical overview
@@ -309,6 +309,17 @@ export default class Obligator extends Plugin {
 				}
 			}
 
+		};
+
+		// This creates an icon in the left ribbon.
+		// This function is called when the user clicks the icon.
+		const ribbonIconEl = this.addRibbonIcon('carrot', `Open today's obligator note`, run_obligator);
+
+		this.app.workspace.onLayoutReady(async () => {
+			// Run obligator if the user has enabled the startup setting.
+			if (this.settings.run_on_startup) {
+				run_obligator();
+			}
 		});
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
@@ -481,6 +492,19 @@ class ObligatorSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				})
 			});
+		// --------------------------------------------------------------------
+		// Toggle for running obligator on startup
+		// --------------------------------------------------------------------
+		new Setting(containerEl)
+			.setName("Open Obligator note on startup")
+			.setDesc(`Open your Obligator note automatically when you open this vault.`)
+			.addToggle(toggle => { toggle
+				.setValue(this.plugin.settings.run_on_startup)
+			    .onChange(async value => {
+					this.plugin.settings.run_on_startup = value;
+					await this.plugin.saveSettings();
+			})
+		})
 
 		// --------------------------------------------------------------------
 		// Toggle for the setting to delete empty headings.
