@@ -229,6 +229,26 @@ export function should_trigger_obligation(obligation_string:string, test_date:mo
 	return false;
 };
 
+export function strip_frontmatter(lines:string[]):string[] {
+	if (lines.length == 0) {
+		return lines
+	}
+
+	if (lines[0] === "---") {
+		const end_index = lines.slice(1).indexOf("---");
+		if (end_index !== -1) {
+			// +1 for the first slice above,
+			// +1 to get above the index of the terminal
+			return lines.slice(end_index + 2);
+		} else {
+			return lines
+		}
+
+	}
+
+	return lines;
+}
+
 // Merge test structure
 /*
 			const s1 = {

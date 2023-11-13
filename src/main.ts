@@ -27,7 +27,8 @@ import {
 	merge_structure,
 	filter_structure,
 	cron_segment_to_list,
-	should_trigger_obligation
+	should_trigger_obligation,
+	strip_frontmatter
 } from "./note_utils"
 
 interface ObligatorSettings {
@@ -163,7 +164,7 @@ export default class Obligator extends Plugin {
 
 			if (last_note) {
 				const last_note_content = await this.app.vault.read(last_note);
-				const last_note_lines = last_note_content.split('\n')
+				const last_note_lines = strip_frontmatter(last_note_content.split('\n'));
 				const last_note_terminal_index = last_note_lines.indexOf(this.settings.terminal);
 				if (last_note_terminal_index === -1) {
 					new Notice(`${last_note.basename} does not contain the
