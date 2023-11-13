@@ -74,11 +74,6 @@ Here is a basic overview of the differences between the two:
 
 - & More!
 
-## TO-DO (In priority order)
-* Make the fold state carry over to the new note.
-* Delete empty headings should retain headings present in the template. Or at
-  least there should be an option for that.
-
 ## Building
 * `yarn install` (install dependencies)
 * `yarn build` (compile typescript to javascript `main.js`)
