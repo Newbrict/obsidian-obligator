@@ -1,10 +1,10 @@
 export const HEADING_REGEX        = /^#{1,7} +\S.*/m;
 export const HEADING_REGEX_GLOBAL = /^#{1,7} +\S.*/gm;
 
-// https://regex101.com/r/YfdnA8/1
-export const CHECKBOX_REGEX = /^(\s*)-\s+\[[x \/]\].*$/m;
-export const UNCHECKEDBOX_REGEX = /^\s*-\s+\[[ \/]\].*$/m;
-export const CHECKEDBOX_REGEX = /^\s*-\s+\[[x]\].*$/m;
+// https://regex101.com/r/e7avuk/1
+export const CHECKBOX_REGEX =     /^(\s*)-\s+\[(.)\].*$/m;
+export const UNCHECKEDBOX_REGEX = /^\s*-\s+\[[^xX]\].*$/m;
+export const CHECKEDBOX_REGEX =   /^\s*-\s+\[[xX]\].*$/m;
 
 // https://regex101.com/r/adwhVh/1
 export const OBLIGATION_REGEX = /^\s*{{ *obligate ([\*\-,\d]+) ([\*\-,\d]+) ([\*\-,\d]+) *}}\s*$/;
