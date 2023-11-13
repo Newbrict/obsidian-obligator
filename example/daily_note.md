@@ -1,4 +1,3 @@
-----
 ## Personal tasks
 {{ obligate 1,15 * * }}
 - [ ] water the plants (added on the 1st and 15th of every month)
@@ -29,3 +28,4 @@
 
 Created on {{date}} {{time}}
 Previous note: [[{{previous_note_path}}|{{previous_note}}]]
+Next note: [[{{next_note_path}}|{{next_note}}]]

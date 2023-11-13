@@ -83,17 +83,8 @@ export function destructure(structure:Parent):string[] {
 	}
 	for (let i = 0; i < structure.children.length; i++) {
 		const child = structure.children[i];
-		//console.log(child)
 		if (child instanceof Object) {
-			//console.log("This is an Object");
 			lines.push(...destructure(child))
-		} else {
-			//console.log("This is a String");
-			//TODO can probably be deleted now
-			// delete'd items from the filter function will be undefined
-			if (child !== undefined) {
-				lines.push(child);
-			}
 		}
 	}
 	return lines;
@@ -248,40 +239,3 @@ export function strip_frontmatter(lines:string[]):string[] {
 
 	return lines;
 }
-
-// Merge test structure
-/*
-			const s1 = {
-				text: null,
-				children: [{
-					text: "# Something",
-					children: ["test5"],
-					total: 1
-				}],
-				total: 2
-			}
-			const s2 = {
-				text: null,
-				children: ["test", "test2", {
-					text: "# Something",
-					children: ["test3"],
-					total: 1
-				}, {
-					text: "# Something else",
-					children: ["test4", {
-						text: "## Deeper",
-						children: ["test6"],
-						total: 1
-					}],
-					total: 2
-				}],
-				total: 7
-			}
-			//const heading_index = template_lines.indexOf(this.settings.heading);
-			//const terminal_index = template_lines.indexOf(this.settings.terminal);
-			//const template_structure = structurize(template_lines.slice(heading_index, terminal_index));
-			//const revert = destructure(template_structure);
-			//console.log(template_structure);
-			//console.log(revert);
-			//console.log(template_lines.slice(heading_index, terminal_index));
-*/

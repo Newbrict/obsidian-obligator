@@ -31,6 +31,10 @@ a how to set up the settings properly with that template:
    previous note from the current note. If there is no previous note, then
    these variables will be blank.
 
+ * {{next_note}} and {{next_note_path}} create forward-links to the
+   next note from the last note. These are added to the last note only when a
+   new note is made.
+
  * {{ obligate * * * }} is a very powerful macro. It lets you set up
    recurring to-do items in your template. It uses a simplified version of the
    cron syntax, where the asterisk represent day-of-the-month,

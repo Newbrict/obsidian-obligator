@@ -70,6 +70,7 @@ export default class Obligator extends Plugin {
 			// 3. Process the last note, if there is one.
 			// 4. Process the template file.
 			// 5. Merge the contents of the last note into the template.
+			//    Do the last_note templates, archiving, and open the new file.
 			// ----------------------------------------------------------------
 			// Step 1
 			// ----------------------------------------------------------------
@@ -283,6 +284,22 @@ export default class Obligator extends Plugin {
 
 			output_file = await this.app.vault.create(NEW_NOTE_PATH, new_note_lines.join('\n'));
 
+			// Open up the new file
+			if (output_file != undefined && output_file instanceof TFile) {
+				await ACTIVE_LEAF.openFile(output_file);
+			}
+
+			// Apply the next_note and next_note_path macros to the old file
+			if (last_note instanceof TFile) {
+				await this.app.vault.process(last_note, (data) => {
+					if (data !== null && output_file instanceof TFile) {
+						data = data.replace(/{{\s*next_note\s*}}/g, output_file.basename);
+						data = data.replace(/{{\s*next_note_path\s*}}/g, output_file.path);
+					}
+					return data;
+				});
+			}
+
 			if (this.settings.archive && last_note) {
 				const archived_note_path = `${this.settings.archive_path}/${last_note.basename}.md`;
 				try {
@@ -292,10 +309,6 @@ export default class Obligator extends Plugin {
 				}
 			}
 
-			// Open up the new file
-			if (output_file != undefined && output_file instanceof TFile) {
-				await ACTIVE_LEAF.openFile(output_file);
-			}
 		});
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
