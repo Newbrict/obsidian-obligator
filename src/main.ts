@@ -10,6 +10,7 @@ import {
 	TFolder,
 	TFile,
 	MomentFormatComponent,
+	ToggleComponent,
 	normalizePath
 } from 'obsidian';
 
@@ -39,6 +40,7 @@ interface ObligatorSettings {
 	archive: boolean;
 	archive_path: string;
 	delete_empty_headings: boolean;
+	keep_template_headings: boolean;
 	run_on_startup: boolean;
 }
 
@@ -50,6 +52,7 @@ const DEFAULT_SETTINGS: ObligatorSettings = {
 	archive: false,
 	archive_path: "",
 	delete_empty_headings: true,
+	keep_template_headings: true,
 	run_on_startup: false
 }
 
@@ -271,6 +274,10 @@ export default class Obligator extends Plugin {
 			//          last note has been processed,
 			//          template has been processed
 			// ----------------------------------------------------------------
+			// Delete from last_note_structure only if this setting is true
+			if (this.settings.keep_template_headings) {
+				filter_structure(last_note_structure, this.settings.delete_empty_headings);
+			}
 
 			if (last_note_structure) {
 				merge_structure(
@@ -279,7 +286,11 @@ export default class Obligator extends Plugin {
 				);
 			}
 
-			filter_structure(template_structure, this.settings.delete_empty_headings);
+			// Delete from the merged structure is false
+			if (!this.settings.keep_template_headings) {
+				filter_structure(template_structure, this.settings.delete_empty_headings);
+			}
+
 			let new_note_lines = destructure(template_structure).concat(OUTPUT_TERMINAL_LINES);
 
 			output_file = await this.app.vault.create(NEW_NOTE_PATH, new_note_lines.join('\n'));
@@ -506,6 +517,8 @@ class ObligatorSettingTab extends PluginSettingTab {
 			})
 		})
 
+		let setting_keep_template_headings:Setting;
+		let toggle_keep_template_headings:ToggleComponent;
 		// --------------------------------------------------------------------
 		// Toggle for the setting to delete empty headings.
 		// --------------------------------------------------------------------
@@ -520,7 +533,31 @@ class ObligatorSettingTab extends PluginSettingTab {
 			    .onChange(async value => {
 					this.plugin.settings.delete_empty_headings = value;
 					await this.plugin.saveSettings();
+					// Make sure the element has been created before using it
+					if (setting_keep_template_headings instanceof Setting) {
+						if (toggle_keep_template_headings instanceof ToggleComponent) {
+							setting_keep_template_headings.setDisabled(!value);
+							this.plugin.settings.keep_template_headings = value;
+							toggle_keep_template_headings.setValue(value);
+							await this.plugin.saveSettings();
+						}
+					}
 			})
 		})
+		// --------------------------------------------------------------------
+		// Toggle for the setting to delete headings
+		// --------------------------------------------------------------------
+		setting_keep_template_headings = new Setting(containerEl)
+			.setName("Don't delete headings from template")
+			.setDesc(`This prevents the setting above from deleting any headings
+					 which are present in the template`)
+			.addToggle(toggle => {toggle
+				.setValue(this.plugin.settings.keep_template_headings)
+			    .onChange(async value => {
+					this.plugin.settings.keep_template_headings = value;
+					await this.plugin.saveSettings();
+				})
+				toggle_keep_template_headings = toggle;
+			}).setDisabled(!this.plugin.settings.delete_empty_headings);
 	}
 }
