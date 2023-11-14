@@ -42,9 +42,9 @@ export function structurize(lines:string[], text:string|null=null):Parent {
 		const is_heading = HEADING_REGEX.test(line);
 		const is_checkbox = CHECKBOX_REGEX.test(line);
 
-		// A heading cannot be a child of a checkbox. text is checked here
+		// A non checkbox cannot be a child of a checkbox. text is checked here
 		// because it can be null when invoked
-		if (is_heading && text && CHECKBOX_REGEX.test(text)) {
+		if (!is_checkbox && text && CHECKBOX_REGEX.test(text)) {
 			break;
 		}
 
