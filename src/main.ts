@@ -275,11 +275,10 @@ export default class Obligator extends Plugin {
 			//          template has been processed
 			// ----------------------------------------------------------------
 			// Delete from last_note_structure only if this setting is true
-			if (this.settings.keep_template_headings) {
-				filter_structure(last_note_structure, this.settings.delete_empty_headings);
-			}
-
 			if (last_note_structure) {
+				if (this.settings.keep_template_headings) {
+					filter_structure(last_note_structure, this.settings.delete_empty_headings);
+				}
 				merge_structure(
 					template_structure,
 					last_note_structure
