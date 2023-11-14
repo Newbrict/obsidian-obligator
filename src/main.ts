@@ -142,23 +142,32 @@ export default class Obligator extends Plugin {
 			// Context: settings are valid, new note doesn't exist.
 			// ----------------------------------------------------------------
 			// Get a list of all the files in the daily notes directory
-			let notes: TFile[] = [];
-			if (NOTE_FOLDER instanceof TFolder) {
-			  for (let child of NOTE_FOLDER.children) {
-					if(child instanceof TFile) {
-						notes.push(child);
+			const find_all_notes = (path:string):TFile[] => {
+				const abstract = this.app.vault.getAbstractFileByPath(normalizePath(path));
+				let notes: TFile[] = [];
+				if (abstract instanceof TFile) {
+					notes.push(abstract);
+				} else if (abstract instanceof TFolder) {
+					for (let child of abstract.children) {
+						notes = notes.concat(find_all_notes(`${path}/${child.name}`));
 					}
 				}
+				return notes;
 			}
-			notes.sort((a, b) =>
-				window.moment(b.basename, this.settings.date_format).valueOf()
-			  - window.moment(a.basename, this.settings.date_format).valueOf()
-			);
+			const notes = find_all_notes(this.settings.note_path);
+			notes.sort((a, b) => {
+				const a_name = a.path.slice(this.settings.note_path.length + 1);
+				const b_name = b.path.slice(this.settings.note_path.length + 1);
+				return window.moment(b_name, this.settings.date_format).valueOf()
+					 - window.moment(a_name, this.settings.date_format).valueOf();
+			});
 
 			// Get the last note that's not today's.
 			let last_note = null;
 			for (let i=0; i < notes.length; i++) {
-				if (window.moment(notes[i].basename, this.settings.date_format).isBefore(NOW, 'day')) {
+				const sub_path = notes[i].path.slice(this.settings.note_path.length + 1);
+				const note_moment = window.moment(sub_path, this.settings.date_format)
+				if (note_moment.isValid() && note_moment.isBefore(NOW, 'day')) {
 					last_note = notes[i];
 					break;
 				}
@@ -243,7 +252,8 @@ export default class Obligator extends Plugin {
 					if (!should_trigger && last_note) {
 						// Walk forward from the source note date (+1) and
 						// check every skipped date.
-						let skipped_moment = window.moment(last_note.basename, this.settings.date_format);
+						const sub_path = last_note.path.slice(this.settings.note_path.length + 1);
+						let skipped_moment = window.moment(sub_path, this.settings.date_format);
 						while (skipped_moment.add(1, 'd').isBefore(NOW) && !should_trigger) {
 							should_trigger = should_trigger_obligation(line, skipped_moment);
 						}
@@ -291,6 +301,15 @@ export default class Obligator extends Plugin {
 			}
 
 			let new_note_lines = destructure(template_structure).concat(OUTPUT_TERMINAL_LINES);
+
+			const directories = NEW_NOTE_PATH.split('/').slice(0,-1);
+			for (let i = 1; i <= directories.length; i++) {
+				const sub_path = directories.slice(0,i).join('/');
+				const abstract = this.app.vault.getAbstractFileByPath(normalizePath(sub_path));
+				if (abstract === null) {
+					this.app.vault.createFolder(sub_path);
+				}
+			}
 
 			output_file = await this.app.vault.create(NEW_NOTE_PATH, new_note_lines.join('\n'));
 
@@ -486,7 +505,10 @@ class ObligatorSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Archive old notes")
 			.setDesc(`Enabling this will move the previous to-do note into the
-					 directory specified when a new note is created.`)
+					 directory specified when a new note is created. This will
+					 not respect any nested date format structure, so your date
+					 format must produce unique names in order to properly use
+					 this option.`)
 			.addToggle(toggle => { toggle
 				.setValue(this.plugin.settings.archive)
 			    .onChange(async value => {

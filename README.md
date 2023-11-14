@@ -23,6 +23,17 @@ a how to set up the settings properly with that template:
 
 ![](example/settings.gif)
 
+### Nested folder date format
+You may use a directory structure in your date format, for example:
+`YYYY/MM-MMMM/YYYY-MM-DD`. This will create notes in a structure that looks
+something like this:
+![](example/nested_dates.png)
+
+If you create a nested structure like this, you probably do not want to use the
+archive function. If for some reason you still do, make sure the file name
+is unique because the archive function does not respect the directory structure
+from the date format, it will flatten everything into the archive directory.
+
 ### Template macros
  * {{date}}, {{time}}, and {{title}} work as they normally would.
 
@@ -44,6 +55,7 @@ a how to set up the settings properly with that template:
    last note and today**. See the [example template file](example/daily_note.md)
    for plenty of common examples. If you are confused about this and want some
    help, just open a GitHub issue.
+
 
 ## Comparison with rollover-daily-todos
 I was motivated to create this project because my to-do list is extensive, with

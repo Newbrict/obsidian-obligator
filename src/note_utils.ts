@@ -7,7 +7,7 @@ export const UNCHECKEDBOX_REGEX = /^\s*-\s+\[[^xX]\].*$/m;
 export const CHECKEDBOX_REGEX =   /^\s*-\s+\[[xX]\].*$/m;
 
 // https://regex101.com/r/adwhVh/1
-export const OBLIGATION_REGEX = /^\s*{{ *obligate ([\*\-,\d]+) ([\*\-,\d]+) ([\*\-,\d]+) *}}\s*$/;
+export const OBLIGATION_REGEX = /^\s*{{\s*obligate\s+([\*\-,\d]+)\s+([\*\-,\d]+)\s+([\*\-,\d]+)\s*}}\s*$/;
 
 export function get_heading_level(heading:string|null) {
 	if (heading && HEADING_REGEX.test(heading)) {
@@ -85,6 +85,8 @@ export function destructure(structure:Parent):string[] {
 		const child = structure.children[i];
 		if (child instanceof Object) {
 			lines.push(...destructure(child))
+		} else if (child !== undefined) {
+			lines.push(child);
 		}
 	}
 	return lines;
