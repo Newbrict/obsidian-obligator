@@ -27,6 +27,7 @@ a how to set up the settings properly with that template:
 You may use a directory structure in your date format, for example:
 `YYYY/MM-MMMM/YYYY-MM-DD`. This will create notes in a structure that looks
 something like this:
+
 ![](example/nested_dates.png)
 
 If you create a nested structure like this, you probably do not want to use the
