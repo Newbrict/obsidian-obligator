@@ -167,8 +167,10 @@ export default class Obligator extends Plugin {
 			// Get the last note that's not today's.
 			let last_note = null;
 			for (let i=0; i < notes.length; i++) {
-				const sub_path = notes[i].path.slice(this.settings.note_path.length + 1);
-				const note_moment = window.moment(sub_path, this.settings.date_format)
+				// Remove the ".md" extension
+				const sub_path = notes[i].path.slice(this.settings.note_path.length + 1).slice(0, -3);
+				// The final boolean makes the moment parse in strict mode
+				const note_moment = window.moment(sub_path, this.settings.date_format, true);
 				if (note_moment.isValid() && note_moment.isBefore(NOW, 'day')) {
 					last_note = notes[i];
 					break;
