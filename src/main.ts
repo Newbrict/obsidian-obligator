@@ -42,6 +42,7 @@ interface ObligatorSettings {
 	delete_empty_headings: boolean;
 	keep_template_headings: boolean;
 	run_on_startup: boolean;
+	keep_until_parent_complete: boolean;
 }
 
 const DEFAULT_SETTINGS: ObligatorSettings = {
@@ -53,7 +54,8 @@ const DEFAULT_SETTINGS: ObligatorSettings = {
 	archive_path: "",
 	delete_empty_headings: true,
 	keep_template_headings: true,
-	run_on_startup: false
+	run_on_startup: false,
+	keep_until_parent_complete: false
 }
 
 export default class Obligator extends Plugin {
@@ -287,7 +289,9 @@ export default class Obligator extends Plugin {
 			// Delete from last_note_structure only if this setting is true
 			if (last_note_structure) {
 				if (this.settings.keep_template_headings) {
-					filter_structure(last_note_structure, this.settings.delete_empty_headings);
+					filter_structure(last_note_structure,
+									 this.settings.delete_empty_headings,
+									 this.settings.keep_until_parent_complete);
 				}
 				merge_structure(
 					template_structure,
@@ -297,7 +301,9 @@ export default class Obligator extends Plugin {
 
 			// Delete from the merged structure is false
 			if (!this.settings.keep_template_headings) {
-				filter_structure(template_structure, this.settings.delete_empty_headings);
+				filter_structure(template_structure,
+								 this.settings.delete_empty_headings,
+								 this.settings.keep_until_parent_complete);
 			}
 
 			let new_note_lines = destructure(template_structure).concat(OUTPUT_TERMINAL_LINES);
@@ -570,8 +576,8 @@ class ObligatorSettingTab extends PluginSettingTab {
 		// --------------------------------------------------------------------
 		setting_keep_template_headings = new Setting(containerEl)
 			.setName("Don't delete headings from template")
-			.setDesc(`This prevents the setting above from deleting any headings
-					 which are present in the template`)
+			.setDesc(`This prevents the setting above from deleting any
+					 headings which are present in the template`)
 			.addToggle(toggle => {toggle
 				.setValue(this.plugin.settings.keep_template_headings)
 			    .onChange(async value => {
@@ -580,5 +586,23 @@ class ObligatorSettingTab extends PluginSettingTab {
 				})
 				toggle_keep_template_headings = toggle;
 			}).setDisabled(!this.plugin.settings.delete_empty_headings);
+
+		// --------------------------------------------------------------------
+		// Toggle for the setting to keep children if the parent isn't complete
+		// --------------------------------------------------------------------
+		setting_keep_template_headings = new Setting(containerEl)
+			.setName("Only delete to-dos when parent is complete")
+			.setDesc(`To-dos which are children of other to-dos will not be
+					 deleted unless the parent is checked, and all of its
+					 children are too. This setting would be used if you want
+					 to retain checked to-dos until the whole structure is
+					 checked.`)
+			.addToggle(toggle => {toggle
+				.setValue(this.plugin.settings.keep_until_parent_complete)
+			    .onChange(async value => {
+					this.plugin.settings.keep_until_parent_complete = value;
+					await this.plugin.saveSettings();
+				})
+			});
 	}
 }

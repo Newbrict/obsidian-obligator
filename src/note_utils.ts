@@ -147,13 +147,26 @@ export function merge_structure (first:Parent, second:Parent) {
 	});
 }
 
-export function filter_structure(structure:Parent, delete_headings:boolean) {
+export function filter_structure(structure:Parent,
+								 delete_headings:boolean,
+								 keep_until_parent_complete:boolean) {
 	for (let i = 0; i < structure.children.length; i++) {
 		const child = structure.children[i];
 		if (typeof child === "object") {
-			filter_structure(child, delete_headings)
+
 			// child.text is checked here because it can be null when invoked.
 			if (child.text) {
+				if (CHECKBOX_REGEX.test(child.text)
+				&& !CHECKEDBOX_REGEX.test(child.text)
+				&& keep_until_parent_complete) {
+					// Here we have a non-checked checkbox and the setting is not
+					// to delete until everything is checked, so we should just
+					// continue at this point.
+					continue;
+				}
+				filter_structure(child,
+								 delete_headings,
+								 keep_until_parent_complete)
 				if (HEADING_REGEX.test(child.text)) {
 					if (delete_headings) {
 						const non_empty = child.children.filter((element) =>  {
@@ -173,9 +186,11 @@ export function filter_structure(structure:Parent, delete_headings:boolean) {
 					}
 				}
 				// Only delete checkedboxes if they have no unchecked children
-				if (CHECKEDBOX_REGEX.test(child.text) && child.children.length === 0) {
-					delete structure.children[i];
-					structure.total = structure.total - 1;
+				if (CHECKEDBOX_REGEX.test(child.text)) {
+					if (child.children.length === 0) {
+						delete structure.children[i];
+						structure.total = structure.total - 1;
+					}
 				}
 			}
 		}
