@@ -145,7 +145,7 @@ export default class Obligator extends Plugin {
 			const find_all_notes = (path:string):TFile[] => {
 				const abstract = this.app.vault.getAbstractFileByPath(normalizePath(path));
 				let notes: TFile[] = [];
-				if (abstract instanceof TFile) {
+				if (abstract instanceof TFile && abstract.extension === "md") {
 					notes.push(abstract);
 				} else if (abstract instanceof TFolder) {
 					for (let child of abstract.children) {
