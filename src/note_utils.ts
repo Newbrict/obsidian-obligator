@@ -42,9 +42,9 @@ export function structurize(lines:string[], text:string|null=null):Parent {
 		const is_heading = HEADING_REGEX.test(line);
 		const is_checkbox = CHECKBOX_REGEX.test(line);
 
-		// A non checkbox cannot be a child of a checkbox. text is checked here
+		// A heading cannot be the child of a checkbox. text is checked here
 		// because it can be null when invoked
-		if (!is_checkbox && text && CHECKBOX_REGEX.test(text)) {
+		if (is_heading && text && CHECKBOX_REGEX.test(text)) {
 			break;
 		}
 
@@ -187,9 +187,15 @@ export function filter_structure(structure:Parent,
 				}
 				// Only delete checkedboxes if they have no unchecked children
 				if (CHECKEDBOX_REGEX.test(child.text)) {
-					if (child.children.length === 0) {
+					// Count the number of unchecked children
+					if (child.children.filter((element) => {
+						if (typeof element == "object" && element.text !== null) {
+							return CHECKBOX_REGEX.test(element.text) && !CHECKEDBOX_REGEX.test(element.text)
+						}
+						return false
+					}).length === 0) {
 						delete structure.children[i];
-						structure.total = structure.total - 1;
+						structure.total = structure.total - (1 + child.children.length);
 					}
 				}
 			}
