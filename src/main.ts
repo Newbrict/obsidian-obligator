@@ -352,6 +352,13 @@ export default class Obligator extends Plugin {
 		// This function is called when the user clicks the icon.
 		const ribbonIconEl = this.addRibbonIcon('carrot', `Open today's obligator note`, run_obligator);
 
+		// Add the command to open today's Obligator note
+		this.addCommand({
+			id: "obligator-run",
+			name: "Open today's note",
+			callback: run_obligator
+		});
+
 		this.app.workspace.onLayoutReady(async () => {
 			// Run obligator if the user has enabled the startup setting.
 			if (this.settings.run_on_startup) {
