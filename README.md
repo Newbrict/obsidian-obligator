@@ -30,10 +30,9 @@ something like this:
 
 ![](example/nested_dates.png)
 
-If you create a nested structure like this, you probably do not want to use the
-archive function. If for some reason you still do, make sure the file name
-is unique because the archive function does not respect the directory structure
-from the date format, it will flatten everything into the archive directory.
+The archive function will not delete directories if you use this in combination
+with a nested directory structure. I suggest only using a nested structure for
+the archive date format.
 
 ### Template macros
  * {{date}}, {{time}}, and {{title}} work as they normally would.
