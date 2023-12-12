@@ -39,6 +39,7 @@ interface ObligatorSettings {
 	note_path: string;
 	archive: boolean;
 	archive_path: string;
+	archive_date_format: string;
 	delete_empty_headings: boolean;
 	keep_template_headings: boolean;
 	run_on_startup: boolean;
@@ -52,6 +53,7 @@ const DEFAULT_SETTINGS: ObligatorSettings = {
 	note_path: "",
 	archive: false,
 	archive_path: "",
+	archive_date_format: "YYYY/MM-MMMM/YYYY-MM-DD",
 	delete_empty_headings: true,
 	keep_template_headings: true,
 	run_on_startup: false,
@@ -125,6 +127,7 @@ export default class Obligator extends Plugin {
 			// Make sure the default value is applied if it's left blank
 			const NOW = window.moment();
 			const DATE_FORMAT = this.settings.date_format || DEFAULT_SETTINGS.date_format;
+			const ARCHIVE_DATE_FORMAT = this.settings.archive_date_format || DEFAULT_SETTINGS.archive_date_format;
 			const NOTE_NAME = NOW.format(DATE_FORMAT);
 			const ACTIVE_LEAF = this.app.workspace.getLeaf();
 
@@ -338,11 +341,24 @@ export default class Obligator extends Plugin {
 			}
 
 			if (this.settings.archive && last_note) {
-				const archived_note_path = `${this.settings.archive_path}/${last_note.basename}.md`;
+
+				const last_note_name = last_note.path.slice(this.settings.note_path.length + 1);
+				const last_note_moment = window.moment(last_note_name, this.settings.date_format);
+				const archive_note_name = last_note_moment.format(ARCHIVE_DATE_FORMAT);
+				const archive_note_path = `${this.settings.archive_path}/${archive_note_name}.md`;
 				try {
-					await this.app.fileManager.renameFile(last_note, archived_note_path);
+					const archive_directories = archive_note_path.split('/').slice(0,-1);
+					for (let i = 1; i <= archive_directories.length; i++) {
+						const sub_path = archive_directories.slice(0,i).join('/');
+						const abstract = this.app.vault.getAbstractFileByPath(normalizePath(sub_path));
+						if (abstract === null) {
+							await this.app.vault.createFolder(sub_path);
+						}
+					}
+					await this.app.fileManager.renameFile(last_note, archive_note_path);
 				} catch (error) {
-					new Notice(`A file called ${archived_note_path} already exists, archival skipped.`);
+					console.log(error);
+					new Notice(`A file called ${archive_note_path} already exists, archival skipped.`);
 				}
 			}
 
@@ -423,11 +439,12 @@ class ObligatorSettingTab extends PluginSettingTab {
 
 		containerEl.empty();
 
+		containerEl.createEl('h1', {text: 'Basic Settings'});
 		// --------------------------------------------------------------------
 		// New note file directory
 		// --------------------------------------------------------------------
 		new Setting(containerEl)
-			.setName("New file location")
+			.setName("New file directory")
 			.setDesc("New daily notes will be placed here.")
 			.addText(text => {
 				new FolderSuggest(this.app, text.inputEl);
@@ -514,31 +531,7 @@ class ObligatorSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				})
 			);
-		// --------------------------------------------------------------------
-		// Toggle the archiving function
-		// --------------------------------------------------------------------
-		new Setting(containerEl)
-			.setName("Archive old notes")
-			.setDesc(`Enabling this will move the previous to-do note into the
-					 directory specified when a new note is created. This will
-					 not respect any nested date format structure, so your date
-					 format must produce unique names in order to properly use
-					 this option.`)
-			.addToggle(toggle => { toggle
-				.setValue(this.plugin.settings.archive)
-			    .onChange(async value => {
-					this.plugin.settings.archive = value;
-					await this.plugin.saveSettings();
-				})
-			})
-			.addText(text => {
-				new FolderSuggest(this.app, text.inputEl);
-				text.setValue(this.plugin.settings.archive_path).onChange(
-				async value => {
-					this.plugin.settings.archive_path = value;
-					await this.plugin.saveSettings();
-				})
-			});
+
 		// --------------------------------------------------------------------
 		// Toggle for running obligator on startup
 		// --------------------------------------------------------------------
@@ -552,6 +545,75 @@ class ObligatorSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 			})
 		})
+
+		containerEl.createEl('h1', {text: 'Archive Settings'});
+		// --------------------------------------------------------------------
+		// Toggle the archiving function
+		// --------------------------------------------------------------------
+		new Setting(containerEl)
+			.setName("Enable archival of old notes")
+			.setDesc(`Enabling this will move the previous to-do note into the
+					 directory specified when a new note is created. The note
+					 will be renamed according to the date format specified.`)
+			.addToggle(toggle => { toggle
+				.setValue(this.plugin.settings.archive)
+			    .onChange(async value => {
+					this.plugin.settings.archive = value;
+					await this.plugin.saveSettings();
+				})
+			});
+
+		// --------------------------------------------------------------------
+		// Archive note file directory
+		// --------------------------------------------------------------------
+		new Setting(containerEl)
+			.setName("Archive directory")
+			.setDesc(`Archived notes will be moved here.`)
+			.addText(text => {
+				new FolderSuggest(this.app, text.inputEl);
+				text.setValue(this.plugin.settings.archive_path).onChange(
+				async value => {
+					this.plugin.settings.archive_path = value;
+					await this.plugin.saveSettings();
+				})
+			});
+
+		// --------------------------------------------------------------------
+		// Archive note file date format (file name)
+		// --------------------------------------------------------------------
+		let archive_date_formatter: MomentFormatComponent;
+		const setting_archive_date_format = new Setting(containerEl)
+			.setName("Archive date format")
+			.addMomentFormat((format: MomentFormatComponent) => {
+				archive_date_formatter = format
+					.setDefaultFormat(DEFAULT_SETTINGS.archive_date_format)
+					.setPlaceholder(DEFAULT_SETTINGS.archive_date_format)
+					.setValue(this.plugin.settings.archive_date_format)
+					.onChange(async (value) => {
+						this.plugin.settings.archive_date_format = value;
+						await this.plugin.saveSettings();
+					});
+			});
+
+		const archive_date_format_el = setting_archive_date_format.descEl.createEl("b", {
+			cls: "u-pop",
+			text: "test"
+		});
+		// @ts-ignore
+		archive_date_formatter.setSampleEl(archive_date_format_el);
+		setting_archive_date_format.descEl.append(
+			"For syntax information, refer to the ",
+			setting_archive_date_format.descEl.createEl("a", {
+				href: "https://momentjs.com/docs/#/displaying/format/",
+				text: "moment documentation"
+			}),
+			setting_archive_date_format.descEl.createEl("br"),
+			"The archival path for today's note would look like this: ",
+			archive_date_format_el
+		);
+
+
+		containerEl.createEl('h1', {text: 'Advanced Settings'});
 
 		let setting_keep_template_headings:Setting;
 		let toggle_keep_template_headings:ToggleComponent;
