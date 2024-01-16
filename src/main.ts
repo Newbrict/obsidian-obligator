@@ -33,6 +33,7 @@ import {
 } from "./note_utils"
 
 interface ObligatorSettings {
+	initial: string;
 	terminal: string;
 	date_format: string;
 	template_path: string;
@@ -47,6 +48,7 @@ interface ObligatorSettings {
 }
 
 const DEFAULT_SETTINGS: ObligatorSettings = {
+	initial: "",
 	terminal: "",
 	date_format: "YYYY-MM-DD",
 	template_path: "",
@@ -95,12 +97,6 @@ export default class Obligator extends Plugin {
 				return;
 			}
 
-			// Make sure the terminal is set, if not, error.
-			if (this.settings.terminal === "") {
-				new Notice("You must specify the terminal heading in the settings.");
-				return;
-			}
-
 			// Make sure that the template file exists
 			const TEMPLATE_FILE = this.app.vault.getAbstractFileByPath(`${this.settings.template_path}.md`);
 			if (TEMPLATE_FILE == undefined) {
@@ -115,6 +111,29 @@ export default class Obligator extends Plugin {
 				new Notice(`${this.settings.template_path} is not a regular file! Aborting.`);
 				return;
 			}
+
+			// Read the template contents here for checking. It will primarily
+			// be used in step 4, though.
+			let template_contents = await this.app.vault.read(TEMPLATE_FILE);
+
+			// Make sure the initial / terminal settings are valid.
+			if (this.settings.initial === null || this.settings.initial === undefined) {
+				this.settings.initial = "";
+			}
+			if (this.settings.terminal === null || this.settings.terminal === undefined) {
+				this.settings.terminal = "";
+			}
+			await this.saveSettings();
+			if (this.settings.terminal != "" && this.settings.initial != "") {
+				const check_template_lines = template_contents.split('\n');
+				const initial_index = check_template_lines.indexOf(this.settings.initial);
+				const terminal_index = check_template_lines.indexOf(this.settings.terminal);
+				if (terminal_index <= initial_index) {
+					new Notice("The initial heading must preceed the terminal heading. Aborting.");
+					return;
+				}
+			}
+
 
 			// Make sure that the archive path is set if the archive option is on.
 			if (this.settings.archive) {
@@ -185,13 +204,21 @@ export default class Obligator extends Plugin {
 			if (last_note) {
 				const last_note_content = await this.app.vault.read(last_note);
 				const last_note_lines = strip_frontmatter(last_note_content.split('\n'));
-				const last_note_terminal_index = last_note_lines.indexOf(this.settings.terminal);
-				if (last_note_terminal_index === -1) {
-					new Notice(`${last_note.basename} does not contain the
-					   specified terminal heading... aborting.`);
+				let last_note_initial_index = last_note_lines.indexOf(this.settings.initial);
+				if (this.settings.initial === "") {
+					last_note_initial_index = 0;
+				} else if (last_note_initial_index === -1) {
+					new Notice(`${last_note.basename} does not contain the specified initial heading... aborting.`);
 					return;
 				}
-				last_note_structure = structurize(last_note_lines.slice(0, last_note_terminal_index))
+				let last_note_terminal_index = last_note_lines.indexOf(this.settings.terminal);
+				if (this.settings.terminal === "") {
+					last_note_terminal_index = last_note_lines.length;
+				} else if (last_note_terminal_index === -1) {
+					new Notice(`${last_note.basename} does not contain the specified terminal heading... aborting.`);
+					return;
+				}
+				last_note_structure = structurize(last_note_lines.slice(last_note_initial_index, last_note_terminal_index))
 			}
 
 			// ----------------------------------------------------------------
@@ -199,7 +226,6 @@ export default class Obligator extends Plugin {
 			// Context: settings are valid, new note doesn't exist,
 			//          last note has been processed
 			// ----------------------------------------------------------------
-			let template_contents = await this.app.vault.read(TEMPLATE_FILE);
 
 			// ------------------------------------------------------------
 			// {{ date }} macro
@@ -281,9 +307,23 @@ export default class Obligator extends Plugin {
 				}
 			}
 
-			const PROCESSED_TI = processed_lines.indexOf(this.settings.terminal);
-			let template_structure = structurize(processed_lines.slice(0, PROCESSED_TI));
-			const OUTPUT_TERMINAL_LINES = processed_lines.slice(PROCESSED_TI)
+			let processed_initial_index = processed_lines.indexOf(this.settings.initial);
+			if (this.settings.initial === "") {
+				processed_initial_index = 0;
+			} else if (processed_initial_index === -1) {
+				new Notice(`${TEMPLATE_FILE.basename} does not contain the specified initial heading... aborting.`);
+				return;
+			}
+			let processed_terminal_index = processed_lines.indexOf(this.settings.terminal);
+			if (this.settings.terminal === "") {
+				processed_terminal_index = processed_lines.length;
+			} else if (processed_terminal_index === -1) {
+				new Notice(`${TEMPLATE_FILE.basename} does not contain the specified terminal heading... aborting.`);
+				return;
+			}
+			let template_structure = structurize(processed_lines.slice(processed_initial_index, processed_terminal_index));
+			const OUTPUT_INITIAL_LINES = processed_lines.slice(0, processed_initial_index)
+			const OUTPUT_TERMINAL_LINES = processed_lines.slice(processed_terminal_index)
 
 			// ----------------------------------------------------------------
 			// Step 5
@@ -311,7 +351,7 @@ export default class Obligator extends Plugin {
 								 this.settings.keep_until_parent_complete);
 			}
 
-			let new_note_lines = destructure(template_structure).concat(OUTPUT_TERMINAL_LINES);
+			let new_note_lines = OUTPUT_INITIAL_LINES.concat(destructure(template_structure)).concat(OUTPUT_TERMINAL_LINES);
 
 			const directories = NEW_NOTE_PATH.split('/').slice(0,-1);
 			for (let i = 1; i <= directories.length; i++) {
@@ -357,7 +397,6 @@ export default class Obligator extends Plugin {
 					}
 					await this.app.fileManager.renameFile(last_note, archive_note_path);
 				} catch (error) {
-					console.log(error);
 					new Notice(`A file called ${archive_note_path} already exists, archival skipped.`);
 				}
 			}
@@ -427,10 +466,13 @@ class ObligatorSettingTab extends PluginSettingTab {
 			return [];
 		}
 		const content = await this.app.vault.read(file);
-		const headings: {[index:string]:any} = Array.from(content.matchAll(HEADING_REGEX_GLOBAL))
+		// TODO The +1 below is a hack to insert "" at index zero. I should
+		// figure out a proper approach.
+		let headings: {[index:string]:any} = Array.from(content.matchAll(HEADING_REGEX_GLOBAL))
 			.reduce((accumulator, [heading], index) => {
-				return {...accumulator, [index.toString()]: heading};
+				return {...accumulator, [(index + 1).toString()]: heading};
 		}, {});
+		headings["0"] = "";
 		return headings;
 	}
 
@@ -511,18 +553,35 @@ class ObligatorSettingTab extends PluginSettingTab {
 		);
 
 		// --------------------------------------------------------------------
-		// Create the dropdown options for the terminal heading selection
+		// Create the dropdown options for the initial / terminal heading selection
 		// --------------------------------------------------------------------
 		const headings = await this.getHeadings(this.plugin.settings.template_path);
 		const terminal_value = Object.keys(headings)
 			.find(key => headings[key] === this.plugin.settings.terminal)
 			|| "";
+		const initial_value = Object.keys(headings)
+			.find(key => headings[key] === this.plugin.settings.initial)
+			|| "";
+		// --------------------------------------------------------------------
+		// The heading which initializes the to-do list items
+		// --------------------------------------------------------------------
+		new Setting(containerEl)
+			.setName('Initial Heading')
+			.setDesc(`(Optional) The heading from the template which begins what Obligator will copy. Everything before this heading in your note will be ignored. If left blank, Obligator will copy from the beginning of the file.`)
+			.addDropdown(dropdown => dropdown
+				.addOptions(headings)
+				.setValue(initial_value)
+				.onChange(async value => {
+					this.plugin.settings.initial = headings[value] || null;
+					await this.plugin.saveSettings();
+				})
+			);
 		// --------------------------------------------------------------------
 		// The heading which terminates the to-do list items
 		// --------------------------------------------------------------------
 		new Setting(containerEl)
 			.setName('Terminal Heading')
-			.setDesc(`The heading from the template which terminates what Obligator will copy. Everything between the start of the note and this heading in your daily note will be copied over.`)
+			.setDesc(`(Optional) The heading from the template which terminates what Obligator will copy. Everything after this heading in your note will be ignored. If left blank, Obligator will copy to the end of the file.`)
 			.addDropdown(dropdown => dropdown
 				.addOptions(headings)
 				.setValue(terminal_value)
