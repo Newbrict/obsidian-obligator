@@ -59,7 +59,7 @@ the archive date format.
 
 ## Comparison with rollover-daily-todos
 I was motivated to create this project because my to-do list is extensive, with
-lots offormatting that I wanted to maintain between notes, but rollover-daily-todos
+lots of formatting that I wanted to maintain between notes, but rollover-daily-todos
 copies *only* the unchecked to-do items and places them all into a specified
 header, killing all of the formatting.
 
